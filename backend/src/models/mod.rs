@@ -95,6 +95,186 @@ pub enum TradeSide {
     Sell,
 }
 
+// ============================================================================
+// العقود الآجلة - Futures
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "position_side", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum PositionSide {
+    Long,
+    Short,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "margin_mode", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum MarginMode {
+    Isolated,
+    Cross,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "position_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum PositionStatus {
+    Open,
+    Closed,
+    Liquidated,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct FuturesPosition {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub pair: String,
+    pub side: PositionSide,
+    pub margin_mode: MarginMode,
+    pub leverage: i32,
+    pub margin: Decimal,
+    pub quantity: Decimal,
+    pub entry_price: Decimal,
+    pub mark_price: Decimal,
+    pub liquidation_price: Decimal,
+    pub unrealized_pnl: Decimal,
+    pub realized_pnl: Decimal,
+    pub status: PositionStatus,
+    pub created_at: DateTime<Utc>,
+    pub closed_at: Option<DateTime<Utc>>,
+    pub close_price: Option<Decimal>,
+}
+
+// ============================================================================
+// التداول بين الأفراد - P2P
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "p2p_side", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum P2PSide {
+    Buy,
+    Sell,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "p2p_offer_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum P2POfferStatus {
+    Active,
+    Paused,
+    Closed,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "p2p_trade_status", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum P2PTradeStatus {
+    Pending,
+    Paid,
+    Released,
+    Cancelled,
+    Disputed,
+    Completed,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct P2POffer {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub side: P2PSide,
+    pub asset_symbol: String,
+    pub price_margin_pct: Decimal,
+    pub min_amount_egp: Decimal,
+    pub max_amount_egp: Decimal,
+    pub payment_methods: Vec<String>,
+    pub time_limit_min: i32,
+    pub status: P2POfferStatus,
+    pub total_trades: i32,
+    pub completion_rate: Decimal,
+    pub avg_release_min: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[sqlx(skip)]
+    pub user_email: Option<String>,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct P2PTrade {
+    pub id: Uuid,
+    pub offer_id: Uuid,
+    pub buyer_id: Uuid,
+    pub seller_id: Uuid,
+    pub asset_symbol: String,
+    pub amount: Decimal,
+    pub price_egp: Decimal,
+    pub total_egp: Decimal,
+    pub payment_method: String,
+    pub status: P2PTradeStatus,
+    pub escrow_locked: bool,
+    pub created_at: DateTime<Utc>,
+    pub paid_at: Option<DateTime<Utc>>,
+    pub released_at: Option<DateTime<Utc>>,
+    pub cancelled_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct P2PMessage {
+    pub id: Uuid,
+    pub trade_id: Uuid,
+    pub sender_id: Uuid,
+    pub message: String,
+    pub created_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// العملات والأزواج - Currencies and Trading Pairs
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "currency_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum CurrencyType {
+    Fiat,
+    Crypto,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct Currency {
+    pub id: Uuid,
+    pub symbol: String,
+    pub name: String,
+    pub r#type: CurrencyType,
+    pub precision: i16,
+    pub withdraw_fee: Decimal,
+    pub min_withdrawal: Decimal,
+    pub network: Option<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize)]
+pub struct TradingPair {
+    pub id: Uuid,
+    pub pair: String,
+    pub base_asset: String,
+    pub quote_asset: String,
+    pub binance_symbol: String,
+    pub is_spot_active: bool,
+    pub is_futures_active: bool,
+    pub maker_fee_bps: i32,
+    pub taker_fee_bps: i32,
+    pub min_order_qty: Decimal,
+    pub price_precision: i16,
+    pub qty_precision: i16,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, FromRow, Serialize)]
 pub struct User {
     pub id: Uuid,

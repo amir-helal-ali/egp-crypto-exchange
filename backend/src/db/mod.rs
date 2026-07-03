@@ -9,6 +9,9 @@ pub mod orders;
 pub mod trades;
 pub mod manual_transactions;
 pub mod settings;
+pub mod futures;
+pub mod p2p;
+pub mod currencies;
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 

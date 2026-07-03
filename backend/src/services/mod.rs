@@ -31,8 +31,26 @@ impl Default for Fees {
     }
 }
 
-/// Load trade pairs from the `settings` table. Falls back to a default set.
+/// Load trade pairs from the `trading_pairs` table. Falls back to settings table.
 pub async fn load_trade_pairs(pool: &sqlx::PgPool) -> anyhow::Result<Vec<TradePair>> {
+    // حاول تحميل من جدول trading_pairs أولاً
+    if let Ok(pairs) = sqlx::query_as::<_, crate::models::TradingPair>(
+        "SELECT * FROM trading_pairs WHERE is_active = true ORDER BY sort_order"
+    )
+    .fetch_all(pool)
+    .await
+    {
+        if !pairs.is_empty() {
+            return Ok(pairs.into_iter().map(|p| TradePair {
+                pair: p.pair,
+                base: p.base_asset,
+                quote: p.quote_asset,
+                binance_symbol: p.binance_symbol,
+            }).collect());
+        }
+    }
+
+    // fallback: من جدول settings
     let row: Option<(serde_json::Value,)> =
         sqlx::query_as("SELECT value FROM settings WHERE key = 'trade_pairs'")
             .fetch_optional(pool)
@@ -41,6 +59,8 @@ pub async fn load_trade_pairs(pool: &sqlx::PgPool) -> anyhow::Result<Vec<TradePa
         let pairs: Vec<TradePair> = serde_json::from_value(v)?;
         return Ok(pairs);
     }
+
+    // fallback افتراضي
     Ok(vec![
         TradePair {
             pair: "BTC_EGP".into(),

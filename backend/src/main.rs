@@ -114,6 +114,12 @@ async fn main() -> anyhow::Result<()> {
         api::trading::engine_event_consumer(state_clone).await;
     });
 
+    // مهمة تحديث أسعار السوق للعقود الآجلة + فحص التصفية
+    let state_clone2 = state.clone();
+    tokio::spawn(async move {
+        api::futures::mark_price_updater(state_clone2).await;
+    });
+
     // HTTP server.
     let router = build_router(state.clone());
     let addr = format!("{}:{}", config.server_host, config.server_port);
