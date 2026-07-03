@@ -1,19 +1,14 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
-    import { orderbooks, recentTrades, tickers, availablePairs, circuitOpen } from '$lib/stores';
+    import { orderbooks, recentTrades, tickers, availablePairs, circuitOpen, myOrders, myTrades, connectMarketWs } from '$lib/stores';
     import { trading } from '$lib/api';
     import { fmtPrice, fmtQty, fmtEgp, fmtDate, pairToAssets } from '$lib/format';
     import type { Order, Trade } from '$lib/types';
     import OrderBook from '$lib/components/OrderBook.svelte';
     import RecentTrades from '$lib/components/RecentTrades.svelte';
-    import PriceChart from '$lib/components/PriceChart.svelte';
+    import CandlestickChart from '$lib/components/CandlestickChart.svelte';
     import OrderForm from '$lib/components/OrderForm.svelte';
-
-    let pair = 'BTC_EGP';
-    let myOpenOrders: Order[] = [];
-    let myRecentTrades: Trade[] = [];
-    let loading = true;
 
     $: pair = $page.params.pair || 'BTC_EGP';
     $: { base, quote } = pairToAssets(pair);
@@ -21,42 +16,44 @@
     $: rt = $recentTrades[pair] || [];
     $: ticker = $tickers[pair];
 
-    async function refreshOrders() {
+    let loading = true;
+
+    onMount(async () => {
         try {
-            const [orders, trades] = await Promise.all([trading.listOrders(), trading.listMyTrades()]);
-            myOpenOrders = orders.filter((o) => o.pair === pair && (o.status === 'open' || o.status === 'partially_filled')).slice(0, 10);
-            myRecentTrades = trades.filter((t) => t.pair === pair).slice(0, 20);
-        } catch { /* ignore */ }
-    }
+            await connectMarketWs();
+        } finally {
+            loading = false;
+        }
+    });
+
+    onDestroy(() => {});
 
     async function cancel(id: string) {
-        if (!confirm('Cancel this order?')) return;
+        if (!confirm('هل تريد إلغاء هذا الأمر؟')) return;
         try {
             await trading.cancelOrder(id);
-            await refreshOrders();
         } catch (e: any) {
             alert(e.message);
         }
     }
 
-    let timer: ReturnType<typeof setInterval>;
-    onMount(() => {
-        refreshOrders().finally(() => (loading = false));
-        timer = setInterval(refreshOrders, 5000);
-    });
-    onDestroy(() => clearInterval(timer));
-
     function handlePlaced() {
-        refreshOrders();
+        // سيتم تحديث الأوامر تلقائياً عبر WebSocket
     }
 
     $: pairs = $availablePairs.length ? $availablePairs : ['BTC_EGP', 'ETH_EGP', 'USDT_EGP'];
+    $: myOpenOrders = $myOrders
+        .filter((o) => o.pair === pair && (o.status === 'open' || o.status === 'partially_filled'))
+        .slice(0, 10);
+    $: myRecentTradesForPair = $myTrades
+        .filter((t) => t.pair === pair)
+        .slice(0, 20);
 </script>
 
-<svelte:head><title>Trade {pair.replace('_', '/')} · EGP Exchange</title></svelte:head>
+<svelte:head><title>تداول {pair.replace('_', '/')} · منصة الجنيه</title></svelte:head>
 
 <div class="space-y-4">
-    <!-- Pair selector -->
+    <!-- اختيار الزوج -->
     <div class="card-compact flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2 flex-wrap">
             {#each pairs as p}
@@ -68,53 +65,60 @@
         {#if ticker}
             <div class="flex items-center gap-4 text-sm">
                 <div>
-                    <span class="text-text-tertiary">Last:</span>
-                    <span class="text-text-primary font-mono ml-1">{fmtEgp(ticker.derived_egp_price)}</span>
+                    <span class="text-text-tertiary">آخر سعر:</span>
+                    <span class="text-text-primary font-mono mr-1">{fmtEgp(ticker.derived_egp_price)}</span>
                 </div>
                 <div>
-                    <span class="text-text-tertiary">Bid:</span>
-                    <span class="text-accent-green font-mono ml-1">{fmtEgp(ticker.bid)}</span>
+                    <span class="text-text-tertiary">طلب:</span>
+                    <span class="text-accent-green font-mono mr-1">{fmtEgp(ticker.bid)}</span>
                 </div>
                 <div>
-                    <span class="text-text-tertiary">Ask:</span>
-                    <span class="text-accent-red font-mono ml-1">{fmtEgp(ticker.ask)}</span>
+                    <span class="text-text-tertiary">عرض:</span>
+                    <span class="text-accent-red font-mono mr-1">{fmtEgp(ticker.ask)}</span>
                 </div>
             </div>
         {/if}
     </div>
 
-    <!-- Main grid -->
+    <!-- الشبكة الرئيسية -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <!-- Chart (left) -->
+        <!-- الرسم البياني (يسار) -->
         <div class="lg:col-span-6 xl:col-span-7 space-y-4">
-            <PriceChart {pair} />
+            <CandlestickChart {pair} />
 
-            <!-- My open orders -->
+            <!-- أOrders المفتوحة -->
             <div class="card-default">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider">My Open Orders</h3>
-                    <a href="/history" class="text-xs text-accent-blue hover:underline">All orders →</a>
+                    <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider">أوامري المفتوحة</h3>
+                    <a href="/history" class="text-xs text-accent-blue hover:underline">كل الأوامر ←</a>
                 </div>
                 {#if loading}
-                    <div class="text-center py-4 text-text-tertiary text-sm">Loading...</div>
+                    <div class="text-center py-4 text-text-tertiary text-sm">جارٍ التحميل...</div>
                 {:else if myOpenOrders.length === 0}
-                    <div class="text-center py-4 text-text-tertiary text-sm">No open orders</div>
+                    <div class="text-center py-4 text-text-tertiary text-sm">لا توجد أوامر مفتوحة</div>
                 {:else}
                     <div class="overflow-x-auto">
                         <table class="table-pro">
                             <thead>
-                                <tr><th>Side</th><th>Type</th><th class="text-right">Price</th><th class="text-right">Qty</th><th class="text-right">Filled</th><th class="text-right">Status</th><th></th></tr>
+                                <tr>
+                                    <th>الجهة</th><th>النوع</th>
+                                    <th class="num-cell">السعر</th>
+                                    <th class="num-cell">الكمية</th>
+                                    <th class="num-cell">المنفذ</th>
+                                    <th>الحالة</th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {#each myOpenOrders as o}
                                     <tr>
-                                        <td><span class={o.side === 'buy' ? 'text-accent-green' : 'text-accent-red'}>{o.side}</span></td>
-                                        <td class="text-text-secondary">{o.order_type}</td>
+                                        <td><span class={o.side === 'buy' ? 'text-accent-green' : 'text-accent-red'}>{o.side === 'buy' ? 'شراء' : 'بيع'}</span></td>
+                                        <td class="text-text-secondary">{o.order_type === 'limit' ? 'محدد' : 'سوقي'}</td>
                                         <td class="num-cell">{o.price ? fmtPrice(o.price) : '—'}</td>
                                         <td class="num-cell">{fmtQty(o.quantity)}</td>
                                         <td class="num-cell text-text-secondary">{fmtQty(o.filled_quantity)}</td>
-                                        <td class="text-right"><span class="pill-warning">{o.status.replace('_', ' ')}</span></td>
-                                        <td class="text-right"><button class="text-accent-red text-xs hover:underline" on:click={() => cancel(o.id)}>Cancel</button></td>
+                                        <td><span class="pill-warning">{o.status === 'partially_filled' ? 'منفذ جزئياً' : 'مفتوح'}</span></td>
+                                        <td><button class="text-accent-red text-xs hover:underline" on:click={() => cancel(o.id)}>إلغاء</button></td>
                                     </tr>
                                 {/each}
                             </tbody>
@@ -123,21 +127,27 @@
                 {/if}
             </div>
 
-            <!-- My recent trades -->
+            <!-- صفقاتي الأخيرة -->
             <div class="card-default">
-                <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider mb-3">My Recent Trades</h3>
-                {#if myRecentTrades.length === 0}
-                    <div class="text-center py-4 text-text-tertiary text-sm">No trades yet</div>
+                <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider mb-3">صفقاتي الأخيرة</h3>
+                {#if myRecentTradesForPair.length === 0}
+                    <div class="text-center py-4 text-text-tertiary text-sm">لا توجد صفقات بعد</div>
                 {:else}
                     <div class="overflow-x-auto">
                         <table class="table-pro">
                             <thead>
-                                <tr><th>Side</th><th class="text-right">Price</th><th class="text-right">Qty</th><th class="text-right">Fee</th><th class="text-right">Time</th></tr>
+                                <tr>
+                                    <th>الجهة</th>
+                                    <th class="num-cell">السعر</th>
+                                    <th class="num-cell">الكمية</th>
+                                    <th class="num-cell">الرسوم</th>
+                                    <th class="num-cell">الوقت</th>
+                                </tr>
                             </thead>
                             <tbody>
-                                {#each myRecentTrades as t}
+                                {#each myRecentTradesForPair as t}
                                     <tr>
-                                        <td><span class={t.taker_side === 'buy' ? 'text-accent-green' : 'text-accent-red'}>{t.taker_side}</span></td>
+                                        <td><span class={t.taker_side === 'buy' ? 'text-accent-green' : 'text-accent-red'}>{t.taker_side === 'buy' ? 'شراء' : 'بيع'}</span></td>
                                         <td class="num-cell">{fmtPrice(t.price)}</td>
                                         <td class="num-cell">{fmtQty(t.quantity)}</td>
                                         <td class="num-cell text-text-secondary">{fmtQty(t.taker_fee)}</td>
@@ -151,13 +161,13 @@
             </div>
         </div>
 
-        <!-- Right column: Order form + Order book + recent trades -->
+        <!-- العمود الأيمن: نموذج الأمر + دفتر الأوامر + آخر الصفقات -->
         <div class="lg:col-span-6 xl:col-span-5 space-y-4">
             <OrderForm {pair} on:placed={handlePlaced} />
             {#if ob}
                 <OrderBook bids={ob.bids} asks={ob.asks} lastPrice={ob.last_price} {pair} />
             {:else}
-                <div class="card-default text-center py-12 text-text-tertiary text-sm">Loading order book...</div>
+                <div class="card-default text-center py-12 text-text-tertiary text-sm">جارٍ تحميل دفتر الأوامر...</div>
             {/if}
             <RecentTrades trades={rt} {pair} />
         </div>

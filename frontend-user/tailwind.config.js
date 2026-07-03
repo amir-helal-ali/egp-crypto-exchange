@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Professional dark-mode palette
+        // لوحة ألوان احترافية للوضع الداكن
         base: {
           900: '#0a0e17',
           800: '#0f1623',
@@ -19,6 +19,7 @@ export default {
           yellow: '#f5a623',
           blue: '#3b82f6',
           cyan: '#06b6d4',
+          purple: '#a855f7',
         },
         text: {
           primary: '#e6e8ee',
@@ -27,13 +28,17 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        // خط عربي أساسي + سانس اللاتيني
+        sans: ['Cairo', 'Tajawal', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+        display: ['Cairo', 'Tajawal', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 3s ease-in-out infinite',
         'flash-green': 'flash-green 0.4s ease-out',
         'flash-red': 'flash-red 0.4s ease-out',
+        'slide-in': 'slide-in 0.3s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out',
       },
       keyframes: {
         'flash-green': {
@@ -43,6 +48,14 @@ export default {
         'flash-red': {
           '0%': { 'background-color': 'rgba(255, 82, 82, 0.3)' },
           '100%': { 'background-color': 'transparent' },
+        },
+        'slide-in': {
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
         },
       },
     },

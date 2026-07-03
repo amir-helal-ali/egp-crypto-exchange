@@ -87,6 +87,13 @@ export const mulDecimal = (a: string, b: string): string => {
     try { return new Decimal(a).times(b).toString(); } catch { return '0'; }
 };
 
+export const divDecimal = (a: string, b: string): string => {
+    try {
+        if (Number(b) === 0) return '0';
+        return new Decimal(a).div(b).toString();
+    } catch { return '0'; }
+};
+
 export const pairToAssets = (pair: string): { base: string; quote: string } => {
     const [base, quote] = pair.split('_');
     return { base: base || '', quote: quote || '' };

@@ -176,4 +176,107 @@ export interface WsCircuitBreaker {
     open: boolean;
 }
 
-export type WsMessage = WsHello | WsTicker | WsTrade | WsOrderbook | WsCircuitBreaker;
+// --- رسائل WebSocket إضافية لحظية (بدون polling) ---
+export interface WsOrderUpdate {
+    type: 'order_update';
+    order: Order;
+}
+export interface WsWalletUpdate {
+    type: 'wallet_update';
+    wallet: Wallet;
+}
+export interface WsManualTxUpdate {
+    type: 'manual_tx_update';
+    tx: ManualTransaction;
+}
+export interface WsPositionUpdate {
+    type: 'position_update';
+    position: Position;
+}
+export interface WsP2POfferUpdate {
+    type: 'p2p_offer_update';
+    offer: P2POffer;
+}
+export interface WsFuturesTick {
+    type: 'futures_tick';
+    pair: string;
+    mark_price: string;
+    funding_rate: string;
+    next_funding: string;
+}
+
+export type WsMessage = WsHello | WsTicker | WsTrade | WsOrderbook | WsCircuitBreaker
+    | WsOrderUpdate | WsWalletUpdate | WsManualTxUpdate | WsPositionUpdate
+    | WsP2POfferUpdate | WsFuturesTick;
+
+// --- العقود الآجلة ---
+export type PositionSide = 'long' | 'short';
+export type MarginMode = 'isolated' | 'cross';
+
+export interface Position {
+    id: string;
+    user_id: string;
+    pair: string;
+    side: PositionSide;
+    margin_mode: MarginMode;
+    leverage: number;
+    margin: string;
+    quantity: string;
+    entry_price: string;
+    mark_price: string;
+    liquidation_price: string;
+    unrealized_pnl: string;
+    realized_pnl: string;
+    status: 'open' | 'closed' | 'liquidated';
+    created_at: string;
+    closed_at: string | null;
+}
+
+// --- P2P ---
+export type P2PSide = 'buy' | 'sell';
+export type P2POfferStatus = 'active' | 'paused' | 'closed';
+export type P2PTradeStatus = 'pending' | 'paid' | 'released' | 'cancelled' | 'disputed' | 'completed';
+
+export interface P2POffer {
+    id: string;
+    user_id: string;
+    side: P2PSide;          // buy = شراء بالجنيه، sell = بيع مقابل جنيه
+    asset_symbol: string;
+    price_margin_pct: number;
+    min_amount_egp: string;
+    max_amount_egp: string;
+    payment_methods: string[];
+    time_limit_min: number;
+    status: P2POfferStatus;
+    total_trades: number;
+    completion_rate: number;
+    avg_release_min: number;
+    created_at: string;
+    user_email?: string;
+}
+
+export interface P2PTrade {
+    id: string;
+    offer_id: string;
+    buyer_id: string;
+    seller_id: string;
+    asset_symbol: string;
+    amount: string;
+    price_egp: string;
+    total_egp: string;
+    payment_method: string;
+    status: P2PTradeStatus;
+    created_at: string;
+    paid_at: string | null;
+    released_at: string | null;
+    cancelled_at: string | null;
+    escrow_locked: boolean;
+}
+
+export interface P2PMessage {
+    id: string;
+    trade_id: string;
+    sender_id: string;
+    message: string;
+    created_at: string;
+}

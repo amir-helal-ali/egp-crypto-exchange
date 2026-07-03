@@ -9,19 +9,19 @@
 
 <div class="card-default">
     <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider">Recent Trades</h3>
+        <h3 class="text-sm font-semibold text-text-primary uppercase tracking-wider">آخر الصفقات</h3>
         <span class="text-xs text-text-tertiary">{base}/{quote}</span>
     </div>
 
     <div class="grid grid-cols-3 gap-2 text-xs text-text-tertiary uppercase font-medium mb-1.5 px-1">
-        <div>Price ({quote})</div>
-        <div class="text-right">Amount ({base})</div>
-        <div class="text-right">Time</div>
+        <div>السعر ({quote})</div>
+        <div class="num-cell">الكمية ({base})</div>
+        <div class="num-cell">الوقت</div>
     </div>
 
     <div class="max-h-96 overflow-y-auto space-y-0.5">
         {#if trades.length === 0}
-            <div class="text-center text-text-tertiary text-sm py-8">No trades yet</div>
+            <div class="text-center text-text-tertiary text-sm py-8">لا توجد صفقات بعد</div>
         {:else}
             {#each trades.slice(0, 50) as t}
                 <div class="grid grid-cols-3 gap-2 px-1 py-0.5 text-sm">

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ----------------------------------------------------------------------------
- * Global styles - Dark Mode Professional Theme
+ * أنماط عامة - المظهر الداكن الاحترافي مع دعم RTL والخط العربي
  * --------------------------------------------------------------------------*/
 
 @layer base {
@@ -17,11 +17,13 @@
         font-feature-settings: 'cv11', 'ss01';
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        direction: rtl;
+        text-align: right;
     }
     * {
         border-color: theme('colors.base.600');
     }
-    /* Custom scrollbar */
+    /* شريط التمرير المخصص */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: theme('colors.base.800'); }
     ::-webkit-scrollbar-thumb {
@@ -29,6 +31,30 @@
         border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover { background: theme('colors.text.tertiary'); }
+
+    /* ضبط RTL للأرقام */
+    .num-cell {
+        font-family: theme('fontFamily.mono');
+        font-variant-numeric: tabular-nums;
+        text-align: left;
+        direction: ltr;
+        unicode-bidi: embed;
+    }
+    /* في RTL، نُبقي الأرقام LTR لكن المحاذاة تتجه لليسار */
+    [dir="rtl"] .num-cell {
+        text-align: left;
+    }
+
+    /* تحسينات RTL */
+    [dir="rtl"] .rtl-flip {
+        transform: scaleX(-1);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: theme('fontFamily.display');
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
 }
 
 @layer components {
@@ -74,7 +100,7 @@
         @apply w-full text-sm;
     }
     .table-pro thead th {
-        @apply text-left text-xs uppercase tracking-wider text-text-tertiary font-medium py-2 px-3;
+        @apply text-right text-xs uppercase tracking-wider text-text-tertiary font-medium py-2 px-3;
     }
     .table-pro tbody td {
         @apply py-2.5 px-3 border-t border-base-700 text-text-primary;
@@ -84,9 +110,17 @@
     }
 }
 
-/* Number cell alignment for trading tables */
-.num-cell {
-    font-family: theme('fontFamily.mono');
-    font-variant-numeric: tabular-nums;
-    text-align: right;
+/* خلفية متدرجة احترافية */
+.gradient-bg {
+    background:
+        radial-gradient(ellipse at top, rgba(59, 130, 246, 0.08), transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.05), transparent 50%),
+        theme('colors.base.900');
+}
+
+/* تأثير زجاجي */
+.glass {
+    background: rgba(15, 22, 35, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
