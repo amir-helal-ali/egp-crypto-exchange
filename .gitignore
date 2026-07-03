@@ -1,2 +1,32 @@
-skills/
-node_modules/
+# Rust
+backend/target/
+backend/**/__pycache__/
+backend/.env
+**/*.rs.bk
+
+# Node / SvelteKit
+frontend-user/node_modules/
+frontend-user/.svelte-kit/
+frontend-user/build/
+frontend-user/.env
+frontend-user/dist/
+
+frontend-admin/node_modules/
+frontend-admin/.svelte-kit/
+frontend-admin/build/
+frontend-admin/.env
+frontend-admin/dist/
+
+# Local env
+.env
+.env.local
+*.log
+
+# Docker
+*.pid
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store

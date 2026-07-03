@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html { color-scheme: dark; }
+    body {
+        background-color: theme('colors.base.900');
+        color: theme('colors.text.primary');
+        font-family: theme('fontFamily.sans');
+        -webkit-font-smoothing: antialiased;
+    }
+    * { border-color: theme('colors.base.600'); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: theme('colors.base.800'); }
+    ::-webkit-scrollbar-thumb { background: theme('colors.base.500'); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: theme('colors.text.tertiary'); }
+}
+
+@layer components {
+    .card { @apply bg-base-800 border border-base-600 rounded-lg; }
+    .card-compact { @apply card p-3; }
+    .card-default { @apply card p-5; }
+    .input {
+        @apply w-full bg-base-900 border border-base-600 rounded-md px-3 py-2
+               text-text-primary placeholder-text-tertiary
+               focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue transition-colors;
+    }
+    .label { @apply block text-sm font-medium text-text-secondary mb-1.5; }
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium text-sm
+               transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+    .btn-primary { @apply btn bg-accent-blue hover:bg-blue-600 text-white; }
+    .btn-success { @apply btn bg-accent-green hover:bg-emerald-500 text-base-900; }
+    .btn-danger { @apply btn bg-accent-red hover:bg-red-600 text-white; }
+    .btn-ghost { @apply btn bg-base-700 hover:bg-base-600 text-text-primary border border-base-600; }
+    .pill { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
+    .pill-success { @apply pill bg-accent-green/15 text-accent-green; }
+    .pill-warning { @apply pill bg-accent-yellow/15 text-accent-yellow; }
+    .pill-danger { @apply pill bg-accent-red/15 text-accent-red; }
+    .pill-info { @apply pill bg-accent-blue/15 text-accent-blue; }
+    .pill-muted { @apply pill bg-base-700 text-text-secondary; }
+    .table-pro { @apply w-full text-sm; }
+    .table-pro thead th {
+        @apply text-left text-xs uppercase tracking-wider text-text-tertiary font-medium py-2 px-3;
+    }
+    .table-pro tbody td {
+        @apply py-2.5 px-3 border-t border-base-700 text-text-primary;
+    }
+    .table-pro tbody tr:hover { @apply bg-base-700/50; }
+}
+
+.num-cell {
+    font-family: theme('fontFamily.mono');
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}

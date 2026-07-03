@@ -1,0 +1,2 @@
+# Empty Cargo.lock placeholder.
+# Run `cargo fetch` inside the backend container to generate the real lockfile.

@@ -1,0 +1,140 @@
+# ============================================================================
+# EGP Closed-Loop Cryptocurrency Exchange — Docker Compose
+# ============================================================================
+# Orchestrates: PostgreSQL, Redis, Rust backend, SvelteKit user frontend,
+# SvelteKit admin frontend. All services run on a private bridge network.
+# Only the frontends + backend expose ports to the host.
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: egp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: egp
+      POSTGRES_PASSWORD: egp_strong_password
+      POSTGRES_DB: egp_exchange
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - egp_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egp -d egp_exchange"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Do not expose the DB port to the host in production.
+    # ports:
+    #   - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: egp-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass egp_redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - egp_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "egp_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: egp-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://egp:egp_strong_password@postgres:5432/egp_exchange
+      DATABASE_MAX_CONNECTIONS: "20"
+      REDIS_URL: redis://:egp_redis_password@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_64char_random_secret_in_production_please_use_openssl_rand_hex_32}
+      JWT_ACCESS_TTL_HOURS: "24"
+      JWT_REFRESH_TTL_DAYS: "30"
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-admin@egp-exchange.local}
+      BINANCE_WS_URL: wss://stream.binance.com:9443/stream
+      BINANCE_REST_URL: https://api.binance.com
+      BINANCE_STREAMS: btcusdt@bookTicker,ethusdt@bookTicker,usdtusdc@bookTicker
+      EGP_USD_RATE: "48.5"
+      CIRCUIT_BREAKER_TIMEOUT_SECS: "30"
+      CIRCUIT_BREAKER_MAX_FAILURES: "5"
+      USER_FRONTEND_ORIGIN: ${USER_FRONTEND_ORIGIN:-http://localhost:3000}
+      ADMIN_FRONTEND_ORIGIN: ${ADMIN_FRONTEND_ORIGIN:-http://localhost:3001}
+      QUEUE_PREFIX: egp_exchange
+      RUST_LOG: egp_exchange_backend=info,axum=info,tower_http=warn
+    ports:
+      - "8080:8080"
+    networks:
+      - egp_internal
+      - egp_edge
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend-user:
+    build:
+      context: ./frontend-user
+      dockerfile: Dockerfile
+    container_name: egp-frontend-user
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+      PUBLIC_WS_URL: ${PUBLIC_WS_URL:-ws://localhost:8080}
+      ORIGIN: ${USER_FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    networks:
+      - egp_edge
+
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+    container_name: egp-frontend-admin
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+      PUBLIC_WS_URL: ${PUBLIC_WS_URL:-ws://localhost:8080}
+      ORIGIN: ${ADMIN_FRONTEND_ORIGIN:-http://localhost:3001}
+    ports:
+      - "3001:3001"
+    networks:
+      - egp_edge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  # Private bridge for DB / Redis / Backend only.
+  egp_internal:
+    driver: bridge
+    internal: true
+  # Edge network — exposes frontends + backend to the host / reverse proxy.
+  egp_edge:
+    driver: bridge
