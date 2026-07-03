@@ -21,16 +21,16 @@
     onMount(load);
 </script>
 
-<svelte:head><title>Audit Log · Admin</title></svelte:head>
+<svelte:head><title>سجل التدقيق · الإدارة</title></svelte:head>
 
 <div class="space-y-6">
     <div>
-        <h1 class="text-2xl font-bold text-text-primary">Admin Audit Log</h1>
-        <p class="text-sm text-text-secondary mt-1">Immutable record of all admin actions</p>
+        <h1 class="text-2xl font-bold text-text-primary">سجل تدقيق المديرين</h1>
+        <p class="text-sm text-text-secondary mt-1">سجل دائم لكل إجراءات المديرين</p>
     </div>
 
     {#if loading}
-        <div class="text-center py-8 text-text-tertiary">Loading...</div>
+        <div class="text-center py-12 text-text-tertiary">جارٍ التحميل...</div>
     {:else if error}
         <div class="text-xs text-accent-red bg-accent-red/10 border border-accent-red/30 rounded px-3 py-2">{error}</div>
     {:else}
@@ -39,11 +39,11 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Admin</th>
-                        <th>Action</th>
-                        <th>Target</th>
-                        <th>Details</th>
-                        <th class="text-right">Time</th>
+                        <th>المدير</th>
+                        <th>الإجراء</th>
+                        <th>الهدف</th>
+                        <th>التفاصيل</th>
+                        <th class="num-cell">الوقت</th>
                     </tr>
                 </thead>
                 <tbody>
