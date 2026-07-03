@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { fmtEgp, fmtQty, fmtDate, fmtRelative } from '$lib/format';
-    import type { ApiError_ } from '$lib/api';
 
     let trades: any[] = [];
     let loading = true;
