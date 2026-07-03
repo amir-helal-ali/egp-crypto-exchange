@@ -20,6 +20,7 @@ mod matching_engine;
 mod models;
 mod redis;
 mod services;
+mod ws_bus;
 
 use api::build_router;
 use auth::JwtConfig;
@@ -39,6 +40,7 @@ pub struct AppState {
     pub binance: Arc<BinanceClient>,
     pub trade_pairs: services::SharedTradePairs,
     pub fees: Fees,
+    pub ws_bus: ws_bus::SharedWsBus,
 }
 
 #[tokio::main]
@@ -89,6 +91,9 @@ async fn main() -> anyhow::Result<()> {
     let (engine_bcast, _) = broadcast::channel::<matching_engine::EngineEvent>(1024);
     let engine = Arc::new(Engine::new(engine_event_tx, engine_bcast.clone()));
 
+    // WebSocket event bus for per-user events.
+    let ws_bus = Arc::new(ws_bus::WsBus::new());
+
     // App state.
     let state = Arc::new(AppState {
         config: config.clone(),
@@ -101,6 +106,7 @@ async fn main() -> anyhow::Result<()> {
         binance: binance.clone(),
         trade_pairs: trade_pairs.clone(),
         fees: fees.clone(),
+        ws_bus: ws_bus.clone(),
     });
 
     // Spawn background tasks.

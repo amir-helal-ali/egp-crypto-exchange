@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { ApiError } from '$lib/api';
     import { fmtEgp, fmtQty, fmtDate, fmtRelative } from '$lib/format';
+    import type { ApiError_ } from '$lib/api';
 
     let trades: any[] = [];
     let loading = true;
@@ -20,11 +20,9 @@
 
     async function load() {
         try {
-            // الـ API الحالي يرجع صفقات المستخدم فقط - نضيف API للأدمن لاحقاً
-            // الآن نستعلم من قاعدة البيانات عبر API عام
-            const res = await fetch(`${API_BASE}/api/admin/overview`, { headers: authHeaders() });
-            // TODO: إضافة API /api/admin/p2p/trades - نستخدم مؤقتاً قائمة فارغة
-            trades = [];
+            const res = await fetch(`${API_BASE}/api/admin/p2p/trades`, { headers: authHeaders() });
+            if (!res.ok) throw new Error('فشل تحميل الصفقات');
+            trades = await res.json();
         } catch (e: any) {
             error = e.message;
         } finally {
@@ -56,6 +54,16 @@
             completed: 'pill-success',
         };
         return map[s] || 'pill-muted';
+    }
+
+    function paymentLabel(id: string): string {
+        const map: Record<string, string> = {
+            bank_transfer: 'تحويل بنكي', vodafone_cash: 'فودافون كاش',
+            instapay: 'إنستا باي', fawry: 'فوري',
+            etisalat_cash: 'اتصالات كاش', orange_cash: 'أورانج كاش',
+            we_pay: 'وي باي', cash_deposit: 'إيداع نقدي',
+        };
+        return map[id] || id;
     }
 
     $: filtered = filter === 'all' ? trades : trades.filter((t) => t.status === filter);
@@ -90,6 +98,7 @@
             <table class="table-pro">
                 <thead>
                     <tr>
+                        <th>المعرف</th>
                         <th>المشتري</th>
                         <th>البائع</th>
                         <th>الأصل</th>
@@ -98,19 +107,20 @@
                         <th class="num-cell">الإجمالي</th>
                         <th>طريقة الدفع</th>
                         <th>الحالة</th>
-                        <th>منذ</th>
+                        <th class="num-cell">منذ</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each filtered as t}
                         <tr>
+                            <td class="num-cell text-text-tertiary text-xs">{t.id.slice(0, 8)}…</td>
                             <td class="num-cell text-text-tertiary text-xs">{t.buyer_id?.slice(0, 8)}…</td>
                             <td class="num-cell text-text-tertiary text-xs">{t.seller_id?.slice(0, 8)}…</td>
                             <td class="font-bold">{t.asset_symbol}</td>
                             <td class="num-cell">{fmtQty(t.amount, 8)}</td>
                             <td class="num-cell">{fmtEgp(t.price_egp)}</td>
                             <td class="num-cell">{fmtEgp(t.total_egp)}</td>
-                            <td class="text-text-secondary text-xs">{t.payment_method}</td>
+                            <td class="text-text-secondary text-xs">{paymentLabel(t.payment_method)}</td>
                             <td><span class={statusPill(t.status)}>{statusLabel(t.status)}</span></td>
                             <td class="num-cell text-text-tertiary text-xs" title={fmtDate(t.created_at)}>{fmtRelative(t.created_at)}</td>
                         </tr>

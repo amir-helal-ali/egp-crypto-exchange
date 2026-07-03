@@ -2,10 +2,12 @@
 //!
 //! Single multiplexed endpoint `/api/market/ws` that accepts a JWT via query
 //! string (`?token=...`) and streams:
-//!   - order book snapshots + deltas
-//!   - public trades
-//!   - ticker updates
-//!   - manual_tx queue events (auth only)
+//!   - order book snapshots + deltas (public)
+//!   - public trades (public)
+//!   - ticker updates (public)
+//!   - circuit breaker state changes (public)
+//!   - order_update, wallet_update, manual_tx_update, position_update,
+//!     p2p_offer_update, p2p_trade_update (auth only — per-user via ws_bus)
 
 use std::sync::Arc;
 
@@ -16,6 +18,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::broadcast;
+use uuid::Uuid;
 
 use crate::auth::TokenType;
 use crate::binance::BinanceClient;
@@ -42,10 +45,12 @@ pub async fn market_ws_handler(
         None => None,
     };
 
-    ws.on_upgrade(move |socket| market_ws_loop(socket, state, auth_user.map(|c| c.sub)))
+    let user_id = auth_user.as_ref().and_then(|c| Uuid::parse_str(&c.sub).ok());
+
+    ws.on_upgrade(move |socket| market_ws_loop(socket, state, user_id))
 }
 
-async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, _user_sub: Option<String>) {
+async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, user_id: Option<Uuid>) {
     let (mut tx, mut rx) = socket.split();
 
     // Send initial hello.
@@ -55,19 +60,27 @@ async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, _user_sub: Opti
                 "type": "hello",
                 "circuit_open": state.binance.breaker.is_open(),
                 "pairs": state.trade_pairs.read().iter().map(|p| p.pair.clone()).collect::<Vec<_>>(),
+                "authenticated": user_id.is_some(),
             })
             .to_string(),
         ))
         .await;
 
-    // Subscribe to all broadcast channels.
+    // Subscribe to public broadcast channels.
     let mut ticker_rx = state.binance.subscribe_tickers();
     let mut engine_rx = state.engine_bcast.subscribe();
     let mut breaker_rx = state.binance.breaker.subscribe();
 
-    // Forward messages from broadcast channels to the websocket.
+    // Subscribe to per-user events (if authenticated).
+    let mut user_rx = if let Some(uid) = user_id {
+        Some(state.ws_bus.register(uid))
+    } else {
+        None
+    };
+
     loop {
         tokio::select! {
+            // --- أحداث عامة (tickers) ---
             recv = ticker_rx.recv() => {
                 if let Ok(t) = recv {
                     let pairs = state.trade_pairs.read().clone();
@@ -84,12 +97,13 @@ async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, _user_sub: Opti
                                 "ts": t.ts,
                             });
                             if tx.send(Message::Text(msg.to_string())).await.is_err() {
-                                return;
+                                break;
                             }
                         }
                     }
                 }
             }
+            // --- أحداث المحرك (صفقات + تحديثات الدفتر) ---
             recv = engine_rx.recv() => {
                 if let Ok(ev) = recv {
                     let msg = match ev {
@@ -116,10 +130,11 @@ async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, _user_sub: Opti
                         }),
                     };
                     if tx.send(Message::Text(msg.to_string())).await.is_err() {
-                        return;
+                        break;
                     }
                 }
             }
+            // --- تغييرات قاطع الدائرة ---
             recv = breaker_rx.recv() => {
                 if let Ok(state_change) = recv {
                     let msg = json!({
@@ -127,23 +142,45 @@ async fn market_ws_loop(socket: WebSocket, state: Arc<AppState>, _user_sub: Opti
                         "open": state_change == crate::binance::BreakerState::Open,
                     });
                     if tx.send(Message::Text(msg.to_string())).await.is_err() {
-                        return;
+                        break;
                     }
                 }
             }
+            // --- أحداث المستخدم الخاصة (order_update, wallet_update, ...) ---
+            recv = async {
+                if let Some(rx) = user_rx.as_mut() {
+                    rx.recv().await
+                } else {
+                    // لا توجد قناة مستخدم — ننتظر للأبد
+                    std::future::pending::<Option<serde_json::Value>>().await
+                }
+            } => {
+                if let Some(msg) = recv {
+                    if tx.send(Message::Text(msg.to_string())).await.is_err() {
+                        break;
+                    }
+                }
+            }
+            // --- رسائل من العميل ---
             msg = rx.next() => {
                 match msg {
                     Some(Ok(Message::Text(t))) => {
-                        // Could implement client-side subscribe/unsubscribe here.
                         if t == "ping" {
                             let _ = tx.send(Message::Text("pong".into())).await;
                         }
                     }
-                    Some(Ok(Message::Close(_))) | None => return,
+                    Some(Ok(Message::Close(_))) | None => break,
                     _ => {}
                 }
             }
         }
+    }
+
+    // Cleanup: unregister from ws_bus
+    if let Some(uid) = user_id {
+        // إنشاء receiver وهمي للتوافق مع API — في الواقع نحتاج فقط لإزالة senders المغلقة
+        let (_, dummy_rx) = tokio::sync::mpsc::unbounded_channel::<serde_json::Value>();
+        state.ws_bus.unregister(uid, &dummy_rx);
     }
 }
 

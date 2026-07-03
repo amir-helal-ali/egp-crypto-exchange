@@ -1,6 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { UserPublic, TickerUpdate, OrderBookSnapshot, Trade, CircuitStatus, WsMessage, Order, Wallet, ManualTransaction, Position, P2POffer } from './types';
+import type { UserPublic, TickerUpdate, OrderBookSnapshot, Trade, CircuitStatus, WsMessage, Order, Wallet, ManualTransaction, Position, P2POffer, P2PTrade, P2PMessage } from './types';
 
 // --- متاجر المصادقة ---
 const emptyUser: UserPublic | null = null;
@@ -55,7 +55,6 @@ export const myTrades = writable<Trade[]>([]);
 export const myDeposits = writable<ManualTransaction[]>([]);
 export const myWithdrawals = writable<ManualTransaction[]>([]);
 export const myPositions = writable<Position[]>([]);
-export const myP2PTrades = writable<any[]>([]);
 
 // --- متاجر العقود الآجلة ---
 export const futuresMarkPrice = writable<Record<string, string>>({});
@@ -63,6 +62,37 @@ export const fundingRate = writable<Record<string, string>>({});
 
 // --- متجر عروض P2P ---
 export const p2pOffers = writable<P2POffer[]>([]);
+
+// --- متاجر P2P الإضافية ---
+export const myP2POffers = writable<P2POffer[]>([]);
+export const myP2PTrades = writable<P2PTrade[]>([]);
+export const p2pMessages = writable<Record<string, P2PMessage[]>>({});  // trade_id -> messages
+export const p2pTradeUpdates = writable<P2PTrade | null>(null);  // آخر تحديث صفقة
+
+// --- متجر الإشعارات ---
+export interface Notification {
+    id: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+    title: string;
+    message: string;
+    ts: number;
+}
+export const notifications = writable<Notification[]>([]);
+
+export function pushNotification(n: Omit<Notification, 'id' | 'ts'>) {
+    const full: Notification = { ...n, id: Math.random().toString(36).slice(2), ts: Date.now() };
+    notifications.update((list) => [full, ...list].slice(0, 50));
+    // إزالة تلقائية بعد 5 ثوان
+    if (browser) {
+        setTimeout(() => {
+            notifications.update((list) => list.filter((x) => x.id !== full.id));
+        }, 5000);
+    }
+}
+
+export function dismissNotification(id: string) {
+    notifications.update((list) => list.filter((x) => x.id !== id));
+}
 
 // --- اتصال WebSocket المركزي (يمنع استخدام polling تماماً) ---
 let ws: WebSocket | null = null;
@@ -248,6 +278,58 @@ function handleWsMessage(msg: WsMessage) {
                 }
                 return [(msg as any).offer, ...offers];
             });
+            // تحديث عروضي أيضاً
+            myP2POffers.update((offers) => {
+                const idx = offers.findIndex((o) => o.id === (msg as any).offer.id);
+                if (idx >= 0) {
+                    const next = [...offers];
+                    next[idx] = (msg as any).offer;
+                    return next;
+                }
+                return offers;
+            });
+            break;
+        case 'p2p_trade_update':
+            // تحديث صفقة P2P
+            {
+                const trade = (msg as any).trade as P2PTrade;
+                p2pTradeUpdates.set(trade);
+                myP2PTrades.update((trades) => {
+                    const idx = trades.findIndex((t) => t.id === trade.id);
+                    if (idx >= 0) {
+                        const next = [...trades];
+                        next[idx] = trade;
+                        return next;
+                    }
+                    return [trade, ...trades];
+                });
+                // إشعار
+                const statusLabels: Record<string, string> = {
+                    pending: 'بانتظار الدفع',
+                    paid: 'تم تأكيد الدفع',
+                    released: 'تم إطلاق العملات',
+                    cancelled: 'تم إلغاء الصفقة',
+                    disputed: 'تم فتح نزاع',
+                    completed: 'تم إكمال الصفقة',
+                };
+                pushNotification({
+                    type: trade.status === 'completed' ? 'success' :
+                          trade.status === 'cancelled' ? 'warning' :
+                          trade.status === 'disputed' ? 'error' : 'info',
+                    title: `صفقة P2P - ${statusLabels[trade.status] || trade.status}`,
+                    message: `${trade.amount} ${trade.asset_symbol} بمبلغ ${trade.total_egp} جنيه`,
+                });
+            }
+            break;
+        case 'p2p_message':
+            // رسالة محادثة جديدة
+            {
+                const m = (msg as any).message as P2PMessage;
+                p2pMessages.update((map) => {
+                    const list = map[m.trade_id] || [];
+                    return { ...map, [m.trade_id]: [...list, m] };
+                });
+            }
             break;
     }
 }

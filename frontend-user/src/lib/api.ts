@@ -155,7 +155,12 @@ export const p2p = {
         const q = qs.toString();
         return request<P2POffer[]>(`/api/p2p/offers${q ? '?' + q : ''}`);
     },
+    listMyOffers: () => request<P2POffer[]>('/api/p2p/offers/mine'),
     getOffer: (id: string) => request<P2POffer>(`/api/p2p/offers/${id}`),
+    updateOfferStatus: (id: string, status: 'active' | 'paused' | 'closed') =>
+        request<P2POffer>(`/api/p2p/offers/${id}/status`, {
+            method: 'POST', body: JSON.stringify({ status }),
+        }),
     createOffer: (req: {
         side: 'buy' | 'sell';
         asset_symbol: string;

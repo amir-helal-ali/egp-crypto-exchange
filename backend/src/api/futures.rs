@@ -109,6 +109,19 @@ pub async fn open_position(
     )
     .await?;
 
+    // --- بث عبر WebSocket ---
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "position_update",
+        "position": position,
+    }));
+    // تحديث محفظة الجنيه (الهامس محجوز)
+    if let Ok(w) = db::wallets::get(&state.db, auth.user_id, &pair_meta.quote).await {
+        state.ws_bus.emit_to_user(auth.user_id, json!({
+            "type": "wallet_update",
+            "wallet": w,
+        }));
+    }
+
     // بث التحديث عبر WebSocket
     let _ = state.engine_bcast.send(crate::matching_engine::EngineEvent::BookUpdate {
         pair: format!("futures:{}", req.pair),
@@ -165,6 +178,18 @@ pub async fn close_position(
         "futures_close",
     )
     .await?;
+
+    // --- بث عبر WebSocket ---
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "position_update",
+        "position": closed,
+    }));
+    if let Ok(w) = db::wallets::get(&state.db, auth.user_id, &pair_meta.quote).await {
+        state.ws_bus.emit_to_user(auth.user_id, json!({
+            "type": "wallet_update",
+            "wallet": w,
+        }));
+    }
 
     Ok(Json(json!({
         "closed": id,

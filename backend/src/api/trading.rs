@@ -199,6 +199,52 @@ pub async fn place_order(
     }
 
     let updated = db::orders::get(&state.db, order_id).await?;
+
+    // --- بث أحداث WebSocket للمستخدم ---
+    // order_update: إرسال الأمر المحدث لصاحبه
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "order_update",
+        "order": updated,
+    }));
+
+    // wallet_update: إرسال المحفظة المحدثة لكل من Taker و Makers
+    let taker_wallet_asset = match req.side {
+        OrderSide::Buy => pair_meta.quote.clone(),
+        OrderSide::Sell => pair_meta.base.clone(),
+    };
+    if let Ok(w) = db::wallets::get(&state.db, auth.user_id, &taker_wallet_asset).await {
+        state.ws_bus.emit_to_user(auth.user_id, json!({
+            "type": "wallet_update",
+            "wallet": w,
+        }));
+    }
+    // إرسال تحديثات المحفظة لكل صانع متأثر
+    let mut affected_makers: std::collections::HashSet<Uuid> = std::collections::HashSet::new();
+    for trade in &result.trades {
+        if affected_makers.insert(trade.maker_user_id) {
+            // إرسال تحديث المحفظتين (base + quote) لكل صانع
+            if let Ok(w) = db::wallets::get(&state.db, trade.maker_user_id, &pair_meta.base).await {
+                state.ws_bus.emit_to_user(trade.maker_user_id, json!({
+                    "type": "wallet_update",
+                    "wallet": w,
+                }));
+            }
+            if let Ok(w) = db::wallets::get(&state.db, trade.maker_user_id, &pair_meta.quote).await {
+                state.ws_bus.emit_to_user(trade.maker_user_id, json!({
+                    "type": "wallet_update",
+                    "wallet": w,
+                }));
+            }
+            // إرسال تحديث أمر الصانع
+            if let Ok(maker_order) = db::orders::get(&state.db, trade.maker_order_id).await {
+                state.ws_bus.emit_to_user(trade.maker_user_id, json!({
+                    "type": "order_update",
+                    "order": maker_order,
+                }));
+            }
+        }
+    }
+
     Ok(Json(json!({
         "order": updated,
         "trades": result.trades,
@@ -253,6 +299,28 @@ pub async fn cancel_order(
     }
 
     db::orders::set_status(&state.db, order_id, OrderStatus::Cancelled).await?;
+
+    // --- بث أحداث WebSocket ---
+    let updated_order = db::orders::get(&state.db, order_id).await?;
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "order_update",
+        "order": updated_order,
+    }));
+    // تحديث المحفظة بعد الاسترجاع
+    if let Some(resting) = &cancelled {
+        let asset = match order.side {
+            OrderSide::Sell => pair_meta.base.clone(),
+            OrderSide::Buy => pair_meta.quote.clone(),
+        };
+        if let Ok(w) = db::wallets::get(&state.db, auth.user_id, &asset).await {
+            state.ws_bus.emit_to_user(auth.user_id, json!({
+                "type": "wallet_update",
+                "wallet": w,
+            }));
+        }
+        let _ = resting;
+    }
+
     Ok(Json(json!({"cancelled": order_id})))
 }
 

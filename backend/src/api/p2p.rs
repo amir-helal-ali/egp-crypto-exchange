@@ -83,6 +83,13 @@ pub async fn create_offer(
         req.time_limit_min,
     )
     .await?;
+
+    // --- بث عبر WebSocket ---
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "p2p_offer_update",
+        "offer": offer,
+    }));
+
     Ok(Json(offer))
 }
 
@@ -162,6 +169,18 @@ pub async fn start_trade(
     )
     .await?;
 
+    // --- بث عبر WebSocket لكلا الطرفين ---
+    let trade_event = json!({ "type": "p2p_trade_update", "trade": trade.clone() });
+    state.ws_bus.emit_to_user(buyer_id, trade_event.clone());
+    state.ws_bus.emit_to_user(seller_id, trade_event);
+    // تحديث محفظة البائع (تم حجز العملة)
+    if let Ok(w) = db::wallets::get(&state.db, seller_id, &offer.asset_symbol).await {
+        state.ws_bus.emit_to_user(seller_id, json!({
+            "type": "wallet_update",
+            "wallet": w,
+        }));
+    }
+
     Ok(Json(trade))
 }
 
@@ -198,6 +217,12 @@ pub async fn confirm_paid(
         return Err(AppError::BadRequest("الحالة لا تسمح بالتأكيد".into()));
     }
     let updated = db::p2p::update_trade_status(&state.db, id, P2PTradeStatus::Paid).await?;
+
+    // --- بث لكلا الطرفين ---
+    let evt = json!({ "type": "p2p_trade_update", "trade": updated.clone() });
+    state.ws_bus.emit_to_user(trade.buyer_id, evt.clone());
+    state.ws_bus.emit_to_user(trade.seller_id, evt);
+
     Ok(Json(updated))
 }
 
@@ -255,6 +280,27 @@ pub async fn release_crypto(
     .await?;
 
     let updated = db::p2p::update_trade_status(&state.db, id, P2PTradeStatus::Completed).await?;
+
+    // --- بث لكلا الطرفين + تحديث المحافظ ---
+    let evt = json!({ "type": "p2p_trade_update", "trade": updated.clone() });
+    state.ws_bus.emit_to_user(trade.buyer_id, evt.clone());
+    state.ws_bus.emit_to_user(trade.seller_id, evt);
+
+    // تحديث محافظ الطرفين
+    for (uid, asset) in [
+        (trade.buyer_id, trade.asset_symbol.as_str()),
+        (trade.buyer_id, "EGP"),
+        (trade.seller_id, trade.asset_symbol.as_str()),
+        (trade.seller_id, "EGP"),
+    ] {
+        if let Ok(w) = db::wallets::get(&state.db, uid, asset).await {
+            state.ws_bus.emit_to_user(uid, json!({
+                "type": "wallet_update",
+                "wallet": w,
+            }));
+        }
+    }
+
     Ok(Json(updated))
 }
 
@@ -283,6 +329,18 @@ pub async fn cancel_trade(
     .await?;
 
     let updated = db::p2p::update_trade_status(&state.db, id, P2PTradeStatus::Cancelled).await?;
+
+    // --- بث لكلا الطرفين + تحديث محفظة البائع ---
+    let evt = json!({ "type": "p2p_trade_update", "trade": updated.clone() });
+    state.ws_bus.emit_to_user(trade.buyer_id, evt.clone());
+    state.ws_bus.emit_to_user(trade.seller_id, evt);
+    if let Ok(w) = db::wallets::get(&state.db, trade.seller_id, &trade.asset_symbol).await {
+        state.ws_bus.emit_to_user(trade.seller_id, json!({
+            "type": "wallet_update",
+            "wallet": w,
+        }));
+    }
+
     Ok(Json(updated))
 }
 
@@ -320,7 +378,62 @@ pub async fn send_message(
         return Err(AppError::BadRequest("الرسالة فارغة".into()));
     }
     let msg = db::p2p::send_message(&state.db, trade_id, auth.user_id, &req.message).await?;
+
+    // --- بث الرسالة لكلا الطرفين ---
+    let evt = json!({ "type": "p2p_message", "trade_id": trade_id, "message": msg.clone() });
+    state.ws_bus.emit_to_user(trade.buyer_id, evt.clone());
+    state.ws_bus.emit_to_user(trade.seller_id, evt);
+
     Ok(Json(msg))
+}
+
+/// قائمة كل عروض المستخدم (لإدارة المستخدم لعروضه)
+pub async fn list_my_offers(
+    auth: AuthUser,
+    State(state): State<Arc<AppState>>,
+) -> AppResult<Json<Vec<P2POffer>>> {
+    let offers = sqlx::query_as::<_, P2POffer>(
+        r#"SELECT o.*, u.email as user_email FROM p2p_offers o
+           JOIN users u ON u.id = o.user_id
+           WHERE o.user_id = $1
+           ORDER BY o.created_at DESC"#,
+    )
+    .bind(auth.user_id)
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(offers))
+}
+
+/// تحديث حالة عرض (إيقاف مؤقت/تفعيل/إغلاق)
+pub async fn update_offer_status(
+    auth: AuthUser,
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateOfferStatusRequest>,
+) -> AppResult<Json<P2POffer>> {
+    let offer = db::p2p::get_offer(&state.db, id).await?;
+    if offer.user_id != auth.user_id {
+        return Err(AppError::Forbidden("ليس عرضك".into()));
+    }
+    let updated = sqlx::query_as::<_, P2POffer>(
+        r#"UPDATE p2p_offers SET status = $2 WHERE id = $1 RETURNING *"#,
+    )
+    .bind(id)
+    .bind(req.status)
+    .fetch_one(&state.db)
+    .await?;
+
+    state.ws_bus.emit_to_user(auth.user_id, json!({
+        "type": "p2p_offer_update",
+        "offer": updated,
+    }));
+
+    Ok(Json(updated))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateOfferStatusRequest {
+    pub status: crate::models::P2POfferStatus,
 }
 
 // JSON helper for overview
@@ -335,4 +448,32 @@ pub async fn p2p_overview(State(state): State<Arc<AppState>>, auth: AuthUser) ->
         "completed": completed,
         "completion_rate": completion_rate,
     })))
+}
+
+/// Admin: قائمة كل صفقات P2P في النظام
+pub async fn admin_list_all_trades(
+    _admin: crate::auth::AdminUser,
+    State(state): State<Arc<AppState>>,
+) -> AppResult<Json<Vec<P2PTrade>>> {
+    let trades = sqlx::query_as::<_, P2PTrade>(
+        r#"SELECT * FROM p2p_trades ORDER BY created_at DESC LIMIT 500"#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(trades))
+}
+
+/// Admin: قائمة كل عروض P2P في النظام
+pub async fn admin_list_all_offers(
+    _admin: crate::auth::AdminUser,
+    State(state): State<Arc<AppState>>,
+) -> AppResult<Json<Vec<P2POffer>>> {
+    let offers = sqlx::query_as::<_, P2POffer>(
+        r#"SELECT o.*, u.email as user_email FROM p2p_offers o
+           JOIN users u ON u.id = o.user_id
+           ORDER BY o.created_at DESC"#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(offers))
 }

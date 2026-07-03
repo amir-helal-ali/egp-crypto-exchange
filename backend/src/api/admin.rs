@@ -272,7 +272,7 @@ pub async fn review_manual_tx(
     .execute(&state.db)
     .await?;
 
-    // Publish status update to the user's channel.
+    // Publish status update to the user's channel (Redis pub/sub).
     let event = QueueEvent {
         manual_tx_id: id,
         user_id: tx.user_id,
@@ -281,6 +281,21 @@ pub async fn review_manual_tx(
         ts: chrono::Utc::now(),
     };
     let _ = state.queue.publish_status(tx.user_id, &event).await;
+
+    // --- بث عبر WebSocket للمستخدم (تحديث لحظي) ---
+    state.ws_bus.emit_to_user(tx.user_id, json!({
+        "type": "manual_tx_update",
+        "tx": updated,
+    }));
+    // إذا اكتمل الإيداع/السحب، حدّث محفظة المستخدم أيضاً
+    if is_final {
+        if let Ok(w) = db::wallets::get(&state.db, tx.user_id, &tx.asset_symbol).await {
+            state.ws_bus.emit_to_user(tx.user_id, json!({
+                "type": "wallet_update",
+                "wallet": w,
+            }));
+        }
+    }
 
     Ok(Json(updated))
 }
@@ -378,5 +393,82 @@ pub async fn audit_log(
     Ok(Json(json!({ "items": items })))
 }
 
-#[allow(dead_code)]
-fn _unused(_: Decimal, _: &str) {}
+// --- تعديل الأرصدة يدوياً - Manual wallet adjustment ---------------------
+
+#[derive(Debug, Deserialize)]
+pub struct AdjustWalletRequest {
+    pub user_id: Uuid,
+    pub asset: String,
+    pub delta: Decimal,        // موجب = إضافة، سالب = خصم
+    pub reason: String,
+}
+
+pub async fn adjust_wallet(
+    admin: AdminUser,
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<AdjustWalletRequest>,
+) -> AppResult<Json<Value>> {
+    if req.delta == Decimal::ZERO {
+        return Err(AppError::BadRequest("المبلغ لا يمكن أن يكون صفراً".into()));
+    }
+    if req.reason.trim().is_empty() {
+        return Err(AppError::BadRequest("السبب مطلوب".into()));
+    }
+
+    let wallet = if req.delta > Decimal::ZERO {
+        db::wallets::credit(
+            &state.db,
+            req.user_id,
+            &req.asset,
+            req.delta,
+            None,
+            "admin_adjustment",
+        )
+        .await?
+    } else {
+        db::wallets::debit(
+            &state.db,
+            req.user_id,
+            &req.asset,
+            -req.delta,
+            None,
+            "admin_adjustment",
+        )
+        .await?
+    };
+
+    // سجل التدقيق
+    sqlx::query(
+        r#"INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details)
+           VALUES ($1, 'adjust_wallet', 'wallet', $2, $3)"#,
+    )
+    .bind(admin.0.user_id)
+    .bind(wallet.id)
+    .bind(json!({
+        "user_id": req.user_id,
+        "asset": req.asset,
+        "delta": req.delta,
+        "reason": req.reason,
+        "new_balance": wallet.balance,
+    }))
+    .execute(&state.db)
+    .await?;
+
+    // بث تحديث المحفظة للمستخدم
+    state.ws_bus.emit_to_user(req.user_id, json!({
+        "type": "wallet_update",
+        "wallet": wallet,
+    }));
+
+    Ok(Json(json!({ "wallet": wallet, "adjusted": req.delta })))
+}
+
+/// Admin: قائمة محافظ مستخدم معين
+pub async fn list_user_wallets(
+    _admin: AdminUser,
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<Uuid>,
+) -> AppResult<Json<Vec<crate::models::Wallet>>> {
+    let wallets = db::wallets::list_for_user(&state.db, user_id).await?;
+    Ok(Json(wallets))
+}

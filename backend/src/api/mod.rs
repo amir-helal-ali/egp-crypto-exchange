@@ -57,7 +57,9 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 
         // P2P - التداول بين الأفراد
         .route("/api/p2p/offers", get(p2p::list_offers).post(p2p::create_offer))
+        .route("/api/p2p/offers/mine", get(p2p::list_my_offers))
         .route("/api/p2p/offers/:id", get(p2p::get_offer))
+        .route("/api/p2p/offers/:id/status", post(p2p::update_offer_status))
         .route("/api/p2p/trades", post(p2p::start_trade).get(p2p::list_my_trades))
         .route("/api/p2p/trades/:id", get(p2p::get_trade))
         .route("/api/p2p/trades/:id/paid", post(p2p::confirm_paid))
@@ -79,6 +81,14 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/admin/trades", get(admin::list_all_trades))
         .route("/api/admin/audit", get(admin::audit_log))
         .route("/api/admin/futures/positions", get(admin_futures_positions))
+
+        // Admin P2P management - إدارة صفقات وعروض P2P
+        .route("/api/admin/p2p/trades", get(p2p::admin_list_all_trades))
+        .route("/api/admin/p2p/offers", get(p2p::admin_list_all_offers))
+
+        // Admin wallet management - إدارة المحافظ
+        .route("/api/admin/wallets/adjust", post(admin::adjust_wallet))
+        .route("/api/admin/users/:id/wallets", get(admin::list_user_wallets))
 
         // Admin currency & pair management - إدارة العملات والأزواج
         .route("/api/admin/currencies", get(settings::list_currencies).post(settings::create_currency))
