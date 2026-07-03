@@ -115,3 +115,39 @@ export interface AdminReviewRequest {
     admin_note?: string;
     tx_hash?: string;
 }
+
+// --- العملات والأزواج ---
+export type CurrencyType = 'fiat' | 'crypto';
+
+export interface Currency {
+    id: string;
+    symbol: string;
+    name: string;
+    type: CurrencyType;
+    precision: number;
+    withdraw_fee: string;
+    min_withdrawal: string;
+    network: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TradingPair {
+    id: string;
+    pair: string;
+    base_asset: string;
+    quote_asset: string;
+    binance_symbol: string;
+    is_spot_active: boolean;
+    is_futures_active: boolean;
+    maker_fee_bps: number;
+    taker_fee_bps: number;
+    min_order_qty: string;
+    price_precision: number;
+    qty_precision: number;
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}

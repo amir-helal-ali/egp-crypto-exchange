@@ -1,376 +1,302 @@
-# EGP Closed-Loop Cryptocurrency Exchange
+# منصة الجنيه للعملات الرقمية
 
-A production-grade cryptocurrency exchange platform priced in **Egyptian Pound (EGP)**, with a closed-loop fiat flow (no third-party payment gateway), live Binance price feeds, an in-memory matching engine, and a fully isolated admin panel for manual deposit/withdrawal processing.
+منصة تبادل عملات رقمية مغلقة الحلقة قائمة على **الجنيه المصري (EGP)**، تتضمن:
+- ✅ تداول سبوت (Spot) مع محرك مطابقة في الذاكرة
+- ✅ تداول العقود الآجلة (Futures) برافعة مالية تصل إلى 125x
+- ✅ نظام تداول بين الأفراد (P2P) مع نظام ضمان (Escrow)
+- ✅ تحكم شامل للأدمن في كل تفاصيل المنصة
+- ✅ واجهة عربية كاملة RTL مع رسوم بيانية احترافية
+- ✅ بدون polling — كل البيانات لحظية عبر WebSocket
 
-> **Disclaimer:** This is a reference implementation. Running a real cryptocurrency exchange requires regulatory licensing, AML/KYC compliance, custody solutions, and security audits. Use at your own risk.
-
----
-
-## Architecture Overview
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                            Host / Reverse Proxy                            │
-└────────────────────────────────────────────────────────────────────────────┘
-        │                              │                              │
-        ▼                              ▼                              ▼
-┌─────────────────┐         ┌──────────────────┐         ┌──────────────────┐
-│ User Frontend   │         │ Rust Backend     │         │ Admin Frontend   │
-│ SvelteKit :3000 │ ◀────▶  │ Axum :8080       │ ◀────▶  │ SvelteKit :3001  │
-└─────────────────┘         └──────────────────┘         └──────────────────┘
-                                     │  │  │
-                ┌────────────────────┘  │  └──────────────────────┐
-                ▼                       ▼                         ▼
-       ┌─────────────────┐   ┌──────────────────┐      ┌──────────────────┐
-       │  PostgreSQL 16  │   │  Redis 7         │      │  Binance WS      │
-       │  Users/Wallets/ │   │  Manual tx queue │      │  Price feed      │
-       │  Orders/Trades  │   │  Pub/Sub + cache │      │  (circuit brkr)  │
-       └─────────────────┘   └──────────────────┘      └──────────────────┘
-```
-
-### Key Design Decisions
-
-| Concern | Choice | Why |
-|---|---|---|
-| Backend language | Rust (Axum + Tokio + SQLx) | Type safety, zero-cost async, deterministic latency for the matching engine |
-| Matching engine | In-memory `BTreeMap` per pair, `parking_lot::RwLock` | O(log n) price-level lookup, O(1) FIFO at each price level |
-| Trade persistence | Async, per-trade row inserted via SQLx | Engine stays non-blocking; DB is the source of truth for ledger |
-| Price feed | Binance public WebSocket only | No trading account / API key required, real-time bookTicker stream |
-| Circuit breaker | Trips after `MAX_FAILURES` parse errors or `TIMEOUT_SECS` of silence | Halts trading to protect users when feed is unhealthy |
-| EGP pricing | Derived: `Binance USDT price × EGP/USD rate` | No direct crypto/EGP pair on Binance; rate configurable in `settings` table |
-| Fiat flow | Manual bank transfer + admin approval | Closed-loop, no payment gateway integration required |
-| Crypto withdrawals | Manual broadcast by admin after review | Provides compliance oversight; locked funds until release |
-| Frontend isolation | Two completely separate SvelteKit apps | Admin never shares state/code with user-facing app; can be deployed to different origins |
-| Deployment | Distroless Rust image + Alpine Node images | Smallest attack surface; no shell in production backend |
+> **تنبيه:** هذه نسخة مرجعية. تشغيل منصة فعلية يتطلب تراخيص قانونية، التزام AML/KYC، حلول حراسة، وتدقيقات أمنية.
 
 ---
 
-## Repository Layout
+## نظرة عامة على البنية
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          المضيف / البروكسي العكسي                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+        │                                │                                  │
+        ▼                                ▼                                  ▼
+┌─────────────────────┐         ┌────────────────────┐         ┌─────────────────────┐
+│ واجهة المستخدم       │         │ الخلفية Rust        │         │ واجهة الإدارة         │
+│ SvelteKit :3000     │ ◀────▶  │ Axum :8080         │ ◀────▶  │ SvelteKit :3001      │
+│ (عربية RTL)         │         │ (محرك مطابقة)       │         │ (عربية RTL)          │
+└─────────────────────┘         └────────────────────┘         └─────────────────────┘
+                                         │  │  │
+                ┌────────────────────────┘  │  └───────────────────────┐
+                ▼                            ▼                          ▼
+       ┌─────────────────┐         ┌──────────────────┐       ┌──────────────────┐
+       │ PostgreSQL 16   │         │ Redis 7          │       │ Binance WS       │
+       │ مستخدمون/محافظ/ │         │ طوابير/Pub-Sub   │       │ تدفق الأسعار     │
+       │ أوامر/صفقات/    │         │ + نظام الضمان    │       │ + قاطع دائرة     │
+       │ عقود/P2P/عملات  │         │ + الكاش          │       │                  │
+       └─────────────────┘         └──────────────────┘       └──────────────────┘
+```
+
+## المميزات
+
+### تداول السبوت (Spot)
+- محرك مطابقة في الذاكرة باستخدام `BTreeMap` (O(log n))
+- أوامر محددة (Limit) وسوقية (Market)
+- دفتر أوامر لحظي بعمق 50 مستوى
+- رسم بياني شموع يابانية (Candlestick) + حجم
+
+### العقود الآجلة (Futures)
+- رافعة مالية من 1x إلى 125x
+- نمط هامش معزول (Isolated) أو متقاطع (Cross)
+- حساب سعر التصفية تلقائياً
+- تحديث أسعار السوق كل ثانيتين
+- تصفية تلقائية عند بلوغ سعر التصفية
+- صفقات طويلة (Long) وقصيرة (Short)
+
+### التداول بين الأفراد (P2P)
+- إنشاء عروض شراء/بيع بالجنيه
+- 8 طرق دفع مصرية: بنك، فودافون كاش، إنستا باي، فوري، اتصالات كاش، أورانج كاش، وي باي، إيداع نقدي
+- نظام ضمان (Escrow): حجز تلقائي للعملات حتى تأكيد الدفع
+- محادثة بين الأطراف داخل الصفقة
+- مهلة زمنية قابلة للتخصيص (15-120 دقيقة)
+- تقييمات بعد إكمال الصفقة
+
+### التحكم الشامل للأدمن
+- **العملات**: إضافة/تعديل/حذف/تفعيل عملة، تحكم في الدقة ورسوم السحب والشبكة
+- **أزواج التداول**: إضافة/تعديل/حذف/تفعيل، تحكم في رسوم الصانع والمنفذ لكل زوج، تفعيل السبوت/العقود الآجلة
+- **الإعدادات**: سعر الجنيه/الدولار، أقل إيداع/سحب
+- **المستخدمون**: تعديل الحالة، مستوى التحقق، إيقاف/حظر
+- **الإيداعات والسحوبات**: طابور يدوي مع موضع كل طلب
+- **مراكز العقود الآجلة**: مراقبة كل المراكز + إغلاق إجباري
+- **سجل التدقيق**: كل إجراء مكتوب بشكل دائم
+
+### واجهات احترافية
+- **عربية كاملة RTL** بخط Cairo
+- **رسوم بيانية احترافية** باستخدام `lightweight-charts` (نفس مكتبة TradingView)
+- **دعم 6 إطارات زمنية**: 1m, 5m, 15m, 1h, 4h, 1d
+- **بدون polling**: كل البيانات عبر WebSocket فقط
+
+---
+
+## بنية المستودع
 
 ```
 .
-├── backend/                          # Rust backend (Axum + SQLx + Tokio)
+├── backend/                          # الخلفية Rust (Axum + Tokio + SQLx)
 │   ├── Cargo.toml
-│   ├── Dockerfile                    # Multi-stage, distroless final image
+│   ├── Dockerfile                    # متعدد المراحل + Distroless نهائي
 │   ├── migrations/
-│   │   └── 20240101000001_init.sql   # Full schema (users, wallets, orders, trades, manual_tx, ledger, audit)
+│   │   ├── 20240101000001_init.sql   # المخطط الأساسي
+│   │   └── 20240102000001_futures_p2p.sql  # العقود + P2P + العملات
 │   └── src/
-│       ├── main.rs                   # Entry point, wires all subsystems
-│       ├── config.rs                 # Env-var based configuration
-│       ├── error.rs                  # Unified AppError + IntoResponse
-│       ├── models/                   # Domain models + DTOs
-│       ├── db/                       # SQLx queries per entity
-│       ├── auth/                     # JWT config + Axum extractors (AuthUser, AdminUser)
-│       ├── matching_engine/          # BTreeMap-based order book + engine
-│       ├── binance/                  # WS client + circuit breaker
-│       ├── redis/                    # Queue + pub/sub for manual tx
-│       ├── services/                 # Trade pair metadata + fee schedule
-│       └── api/                      # HTTP routes
-│           ├── auth.rs               # /api/auth/*
-│           ├── user.rs               # /api/user/me
-│           ├── trading.rs            # /api/user/orders, /api/market/*
-│           ├── wallet.rs             # /api/user/wallets, deposits, withdrawals
-│           ├── admin.rs              # /api/admin/* (admin-only)
-│           └── ws.rs                 # /api/market/ws (multiplexed WS)
-├── frontend-user/                    # SvelteKit user frontend (port 3000)
-│   ├── package.json
-│   ├── Dockerfile
-│   ├── svelte.config.js
-│   ├── tailwind.config.js
-│   ├── src/
-│   │   ├── app.html, app.css
-│   │   ├── lib/
-│   │   │   ├── api.ts                # Typed API client
-│   │   │   ├── types.ts              # Shared types matching backend models
-│   │   │   ├── stores.ts             # Svelte stores + WS connection
-│   │   │   ├── format.ts             # Decimal-safe formatters
-│   │   │   └── components/
-│   │   │       ├── CircuitBanner.svelte
-│   │   │       ├── OrderBook.svelte
-│   │   │       ├── RecentTrades.svelte
-│   │   │       ├── PriceChart.svelte
-│   │   │       └── OrderForm.svelte
-│   │   └── routes/
-│   │       ├── +layout.svelte        # Nav, header, footer
-│   │       ├── +page.svelte          # Dashboard
-│   │       ├── login/+page.svelte
-│   │       ├── register/+page.svelte
-│   │       ├── trade/[pair]/+page.svelte   # Trade view
-│   │       ├── wallet/+page.svelte         # Wallet + deposit/withdraw
-│   │       └── history/+page.svelte        # Orders + trades history
-├── frontend-admin/                   # SvelteKit admin frontend (port 3001)
-│   ├── (same structure as frontend-user)
+│       ├── main.rs                   # نقطة الدخول
+│       ├── config.rs, error.rs       # الإعدادات والأخطاء
+│       ├── models/mod.rs             # كل النماذج
+│       ├── db/                       # استعلامات SQLx لكل جدول
+│       │   ├── users.rs, wallets.rs, orders.rs, trades.rs
+│       │   ├── manual_transactions.rs, settings.rs
+│       │   ├── futures.rs, p2p.rs, currencies.rs
+│       ├── auth/                     # JWT + Extractors
+│       ├── matching_engine/          # محرك BTreeMap
+│       ├── binance/                  # WS + قاطع دائرة
+│       ├── redis/                    # طوابير + Pub/Sub
+│       ├── services/                 # أزواج التداول + الرسوم
+│       └── api/
+│           ├── auth.rs, user.rs, trading.rs, wallet.rs, admin.rs, ws.rs
+│           ├── futures.rs            # العقود الآجلة
+│           ├── p2p.rs                # التداول بين الأفراد
+│           └── settings.rs           # إدارة العملات والأزواج
+├── frontend-user/                    # واجهة المستخدم (port 3000)
+│   └── src/
+│       ├── lib/
+│       │   ├── i18n/                 # قاموس الترجمة العربية
+│       │   ├── api.ts, types.ts, stores.ts, format.ts
+│       │   └── components/
+│       │       ├── CandlestickChart.svelte  # رسم الشموع الاحترافي
+│       │       ├── OrderBook.svelte, OrderForm.svelte
+│       │       └── RecentTrades.svelte, CircuitBanner.svelte
+│       └── routes/
+│           ├── +layout.svelte, +page.svelte  # لوحة التحكم
+│           ├── login/, register/
+│           ├── trade/[pair]/         # شاشة التداول
+│           ├── futures/[pair]/       # العقود الآجلة
+│           ├── p2p/, p2p/create/, p2p/[id]/  # P2P
+│           ├── wallet/, history/
+├── frontend-admin/                   # واجهة الإدارة (port 3001)
 │   └── src/routes/
-│       ├── +layout.svelte            # Sidebar admin nav
-│       ├── +page.svelte              # Overview
-│       ├── login/+page.svelte        # Admin-only login
-│       ├── deposits/+page.svelte     # Pending EGP deposits queue
-│       ├── withdrawals/+page.svelte  # Pending crypto withdrawals queue
-│       ├── users/+page.svelte        # User management
-│       ├── liquidity/+page.svelte    # System liquidity monitor
-│       ├── orders/+page.svelte       # All orders browser
-│       ├── trades/+page.svelte       # All trades browser
-│       └── audit/+page.svelte        # Admin audit log
-├── docker-compose.yml                # Orchestrates all 5 services
-├── .env.example                      # Copy to .env before deploy
+│       ├── +layout.svelte, +page.svelte
+│       ├── login/, deposits/, withdrawals/, users/
+│       ├── liquidity/, currencies/, pairs/
+│       ├── futures-positions/, p2p-trades/
+│       ├── orders/, trades/, audit/, settings/
+├── docker-compose.yml                # تنسيق كل الخدمات
+├── .env.example                      # نسخ قبل النشر
 └── README.md
 ```
 
 ---
 
-## Database Schema
+## قاعدة البيانات
 
-The full schema lives in [`backend/migrations/20240101000001_init.sql`](backend/migrations/20240101000001_init.sql). Highlights:
-
-| Table | Purpose |
+### الجداول الأساسية (migration 1)
+| الجدول | الوصف |
 |---|---|
-| `users` | User accounts with role (`user`/`admin`), status (active/suspended/banned/pending_kyc), KYC level, failed login counter |
-| `wallets` | Per-user per-asset balances with separate `balance` and `locked_balance` columns |
-| `orders` | Limit/market orders with side, type, price, quantity, filled_quantity, status |
-| `trades` | Taker × maker cross-reference with taker_fee, maker_fee |
-| `manual_transactions` | EGP deposits (fiat) + crypto withdrawals (crypto) with full lifecycle status |
-| `wallet_ledger` | Append-only audit trail of every balance change |
-| `admin_audit_log` | Every admin action (status change, manual tx review, etc.) |
-| `system_liquidity` | Aggregate cache for admin overview |
-| `settings` | JSON key/value store for fees, EGP/USD rate, trade pairs |
+| `users` | المستخدمون مع الدور والحالة ومستوى التحقق |
+| `wallets` | محافظ لكل مستخدم × عملة (رصيد + محجوز) |
+| `orders` | الأوامر المحددة والسوقية |
+| `trades` | الصفقات (Taker × Maker) |
+| `manual_transactions` | إيداعات EGP + سحب العملات |
+| `wallet_ledger` | سجل دائم لكل تغيير في الرصيد |
+| `admin_audit_log` | سجل إجراءات المديرين |
+| `settings` | إعدادات JSONB |
 
-All monetary amounts use `NUMERIC(28, 8)` to preserve precision across both fiat (2dp) and crypto (8dp) values.
-
----
-
-## Matching Engine
-
-The engine is implemented in [`backend/src/matching_engine/mod.rs`](backend/src/matching_engine/mod.rs).
-
-**Algorithm:**
-- Each pair gets its own `OrderBook` guarded by a `parking_lot::RwLock`.
-- Bids use `BTreeMap<PriceKey, VecDeque<Order>>` with reversed ordering (highest bid first).
-- Asks use the same map with natural ordering (lowest ask first).
-- `PriceKey(Decimal)` is a wrapper that provides `Ord` for decimal keys.
-- When a new order arrives:
-  1. Lock the opposite side's book.
-  2. Walk best prices while price condition is satisfied.
-  3. Match against the front of the VecDeque at each level (FIFO).
-  4. If order is a limit and has remaining qty, insert it as a resting order.
-- Trade events are emitted via `tokio::sync::mpsc` (for persistence) and `broadcast` (for WS fan-out).
-
-**Complexity:**
-- Insert: O(log n) — `BTreeMap` insertion
-- Best-price lookup: O(1) — first/last key
-- Match at price level: O(1) — VecDeque front
-- Cancel: O(log n + k) — find level + linear scan within level (could be optimized with a secondary `HashMap<Uuid, (PriceKey, usize)>` index in production)
+### الجداول الجديدة (migration 2)
+| الجدول | الوصف |
+|---|---|
+| `futures_positions` | مراكز العقود الآجلة |
+| `funding_payments` | مدفوعات التمويل |
+| `liquidations` | سجل التصفيات |
+| `futures_user_settings` | إعدادات المستخدم للعقود |
+| `p2p_offers` | عروض التداول بين الأفراد |
+| `p2p_trades` | صفقات P2P |
+| `p2p_messages` | محادثات الصفقات |
+| `p2p_reviews` | تقييمات المستخدمين |
+| `currencies` | العملات المدعومة |
+| `trading_pairs` | أزواج التداول مع الإعدادات |
 
 ---
 
-## Circuit Breaker
+## التشغيل السريع (Docker Compose)
 
-Implemented in [`backend/src/binance/mod.rs`](backend/src/binance/mod.rs).
-
-**Trip conditions:**
-1. No valid WebSocket message received for `CIRCUIT_BREAKER_TIMEOUT_SECS` (default 30s).
-2. `CIRCUIT_BREAKER_MAX_FAILURES` consecutive parse/transport failures (default 5).
-
-**Behavior when open:**
-- All `POST /api/user/orders` requests return `503 SERVICE_UNAVAILABLE` with `code: "circuit_breaker_open"`.
-- The user frontend shows a red banner and disables the order form.
-- The admin overview displays "OPEN" status.
-- The matching engine itself continues running — resting orders are still in memory, but no new taker orders can be submitted.
-
-**Recovery:**
-- A background watchdog checks every 2 seconds.
-- When Binance feed recovers (first valid message received), the breaker closes automatically and trading resumes.
-
----
-
-## Manual Transaction Flow
-
-```
-User submits deposit request
-    │
-    ▼
-┌──────────────────────────────────────────┐
-│ Backend inserts row in manual_transactions│
-│ status = 'pending'                        │
-│ Enqueues id in Redis list                 │
-│ "egp_exchange:pending:deposit:fiat"       │
-└──────────────────────────────────────────┘
-    │
-    ▼ (admin reviews)
-┌──────────────────────────────────────────┐
-│ Admin opens review modal                  │
-│ - Verifies bank transfer receipt          │
-│ - Sets status: under_review / approved /  │
-│   completed / rejected / failed           │
-│ - Optional admin_note                     │
-└──────────────────────────────────────────┘
-    │
-    ▼ (admin finalizes)
-┌──────────────────────────────────────────┐
-│ If 'completed' (deposit):                 │
-│   credit user EGP wallet                  │
-│ If 'completed' (withdrawal):              │
-│   unlock locked balance,                  │
-│   debit user crypto wallet                │
-│ If 'rejected'/'failed' (withdrawal):      │
-│   unlock + refund locked balance          │
-│ Publishes status to user's Redis channel  │
-│ Dequeues id from pending list             │
-│ Writes admin_audit_log entry              │
-└──────────────────────────────────────────┘
-```
-
-Users see their queue position in real-time via the `queue_position` field returned by `GET /api/user/deposits` and `GET /api/user/withdrawals`.
-
----
-
-## API Endpoints
-
-### Public
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | Liveness probe |
-| GET | `/health/ready` | Readiness probe (checks DB + Redis) |
-| GET | `/api/market/tickers` | Latest ticker for all pairs |
-| GET | `/api/market/orderbook/:pair` | Order book snapshot (depth=50) |
-| GET | `/api/market/trades/:pair?limit=` | Recent public trades |
-| GET | `/api/market/circuit` | Circuit breaker state |
-| WS | `/api/market/ws?token=` | Multiplexed live stream (tickers, orderbook, trades, circuit events) |
-
-### Auth
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create user account |
-| POST | `/api/auth/login` | Sign in (returns access + refresh JWT) |
-| POST | `/api/auth/refresh` | Exchange refresh token for new pair |
-| GET | `/api/user/me` | Current user profile |
-
-### User (authenticated)
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/user/wallets` | List user's wallets |
-| GET/POST | `/api/user/orders` | List / place order |
-| DELETE | `/api/user/orders/:id` | Cancel open order |
-| GET | `/api/user/trades` | User's trade history |
-| GET/POST | `/api/user/deposits` | List / request EGP deposit |
-| GET/POST | `/api/user/withdrawals` | List / request crypto withdrawal |
-| GET | `/api/user/ledger[/:asset]` | Wallet ledger entries |
-
-### Admin (admin role required)
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/admin/overview` | System-wide stats |
-| GET | `/api/admin/users` | Paginated user list |
-| GET | `/api/admin/users/:id` | User detail |
-| PUT | `/api/admin/users/:id/status` | Update user status/KYC |
-| GET | `/api/admin/manual_tx` | List manual transactions (filters: tx_type, status) |
-| GET | `/api/admin/manual_tx/:id` | Manual tx detail |
-| POST | `/api/admin/manual_tx/:id/review` | Approve / reject / complete manual tx |
-| GET | `/api/admin/liquidity` | Aggregate liquidity per asset |
-| GET | `/api/admin/orders` | All orders |
-| GET | `/api/admin/trades` | All trades |
-| GET | `/api/admin/audit` | Admin audit log |
-
----
-
-## Quickstart (Docker Compose)
-
-### Prerequisites
+### المتطلبات
 - Docker 24+
 - Docker Compose v2.20+
 
-### Steps
+### الخطوات
 
 ```bash
-# 1. Clone and enter the project
-cd egp-exchange
+# 1. استنساخ المستودع
+git clone https://github.com/amir-helal-ali/egp-crypto-exchange.git
+cd egp-crypto-exchange
 
-# 2. Generate a strong JWT secret
+# 2. توليد سر JWT قوي
 export JWT_SECRET=$(openssl rand -hex 32)
 
-# 3. (Optional) customize environment
+# 3. تخصيص البيئة (اختياري)
 cp .env.example .env
-# Edit .env to set ADMIN_BOOTSTRAP_EMAIL, frontend origins, etc.
 
-# 4. Build and start all services
+# 4. بناء وتشغيل كل الخدمات
 docker compose up -d --build
 
-# 5. Watch the backend logs (migrations run automatically on first boot)
+# 5. مراقبة سجلات الخلفية
 docker compose logs -f backend
 ```
 
-Once healthy, open:
-- **User frontend:** http://localhost:3000
-- **Admin frontend:** http://localhost:3001
-- **Backend health:** http://localhost:8080/health
+بعد التشغيل:
+- **واجهة المستخدم:** http://localhost:3000
+- **واجهة الإدارة:** http://localhost:3001
+- **حالة الخلفية:** http://localhost:8080/health
 
-Default admin credentials (change immediately in production):
+بيانات المدير الافتراضية (غيّرها فوراً في الإنتاج):
 ```
-Email: admin@egp-exchange.local
-Password: ChangeMe!Admin2024
-```
-
----
-
-## Local Development (without Docker)
-
-### Backend
-```bash
-cd backend
-cp .env.example .env
-# Edit .env: point DATABASE_URL and REDIS_URL to localhost services
-# Start Postgres + Redis locally (e.g. via docker compose up postgres redis)
-
-cargo sqlx migrate run --database-url "$DATABASE_URL"
-cargo run
-```
-
-### Frontends
-```bash
-# Terminal 1 — user frontend
-cd frontend-user
-npm install
-npm run dev
-
-# Terminal 2 — admin frontend
-cd frontend-admin
-npm install
-npm run dev
+البريد: admin@egp-exchange.local
+كلمة المرور: ChangeMe!Admin2024
 ```
 
 ---
 
-## Security Notes
+## نقاط API
 
-1. **JWT secret** must be at least 32 characters. The backend refuses to start otherwise.
-2. **Database password** and **Redis password** are baked into `docker-compose.yml` for dev convenience — replace them with secrets in production (use Docker secrets, Vault, or your orchestrator's secret manager).
-3. **CORS** is restricted to the two configured frontend origins. Update `USER_FRONTEND_ORIGIN` and `ADMIN_FRONTEND_ORIGIN` for production domains.
-4. **Circuit breaker** protects users from trading against stale prices. Tune `CIRCUIT_BREAKER_TIMEOUT_SECS` and `CIRCUIT_BREAKER_MAX_FAILURES` based on your latency tolerance.
-5. **Admin endpoints** require an `admin` role JWT. The bootstrap admin is created on first launch with a default password — change it immediately.
-6. **Wallet ledger** is append-only and provides a full audit trail. Never delete from it.
-7. **Frontend isolation**: the user and admin SvelteKit apps are completely separate processes with no shared state. They can be deployed to different domains and even different networks.
-8. **No third-party payment gateway**: EGP deposits/withdrawals are entirely manual. This is by design — it's a closed-loop system.
+### عامة
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/health` | فحص الحياة |
+| GET | `/api/market/tickers` | أسعار كل الأزواج |
+| GET | `/api/market/orderbook/:pair` | دفتر الأوامر |
+| GET | `/api/market/trades/:pair` | آخر الصفقات |
+| GET | `/api/market/circuit` | حالة قاطع الدائرة |
+| WS | `/api/market/ws` | تدفق لحظي شامل |
+
+### المصادقة
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| POST | `/api/auth/register` | إنشاء حساب |
+| POST | `/api/auth/login` | تسجيل دخول |
+| POST | `/api/auth/refresh` | تجديد الرمز |
+
+### المستخدم
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/api/user/me` | ملف المستخدم |
+| GET | `/api/user/wallets` | المحافظ |
+| GET/POST | `/api/user/orders` | الأوامر |
+| DELETE | `/api/user/orders/:id` | إلغاء أمر |
+| GET/POST | `/api/user/deposits` | الإيداعات |
+| GET/POST | `/api/user/withdrawals` | السحوبات |
+
+### العقود الآجلة
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET/POST | `/api/futures/positions` | قائمة/فتح مركز |
+| POST | `/api/futures/positions/:id/close` | إغلاق مركز |
+
+### التداول بين الأفراد
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET/POST | `/api/p2p/offers` | قائمة/إنشاء عرض |
+| GET | `/api/p2p/offers/:id` | تفاصيل عرض |
+| POST | `/api/p2p/trades` | بدء صفقة |
+| POST | `/api/p2p/trades/:id/paid` | تأكيد الدفع |
+| POST | `/api/p2p/trades/:id/release` | إطلاق العملات |
+| POST | `/api/p2p/trades/:id/cancel` | إلغاء الصفقة |
+| GET/POST | `/api/p2p/trades/:id/messages` | الرسائل |
+
+### الإدارة
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/api/admin/overview` | نظرة عامة |
+| GET/POST | `/api/admin/currencies` | العملات |
+| PUT/DELETE | `/api/admin/currencies/:id` | تعديل/حذف عملة |
+| GET/POST | `/api/admin/pairs` | أزواج التداول |
+| PUT/DELETE | `/api/admin/pairs/:id` | تعديل/حذف زوج |
+| GET/PUT | `/api/admin/settings` | إعدادات النظام |
+| GET | `/api/admin/users` | المستخدمون |
+| GET | `/api/admin/manual_tx` | الإيداعات/السحوبات |
+| POST | `/api/admin/manual_tx/:id/review` | مراجعة طلب |
+| GET | `/api/admin/futures/positions` | كل المراكز |
 
 ---
 
-## Production Hardening Checklist
+## الأمان
 
-- [ ] Generate fresh `JWT_SECRET`, DB password, Redis password
-- [ ] Set up a reverse proxy (Caddy / Nginx) with TLS termination for all three services
-- [ ] Configure PostgreSQL with `pg_dump` automated backups
-- [ ] Configure Redis with AOF persistence (already enabled in compose)
-- [ ] Add rate limiting middleware to the backend (`tower::limit::ConcurrencyLimit` or `tower-governor`)
-- [ ] Add Prometheus metrics exporter (via `tower-http::trace` + a `/metrics` endpoint)
-- [ ] Run `cargo audit` regularly for vulnerable dependencies
-- [ ] Run `cargo clippy -- -D warnings` in CI
-- [ ] Set up Sentry / Loki for log aggregation
-- [ ] Implement withdrawal address allow-listing per user (KYC-gated)
-- [ ] Add 2FA for admin accounts
-- [ ] Add IP allow-listing for admin frontend access (reverse proxy layer)
-- [ ] Implement email/SMS notifications for deposit confirmations
-- [ ] Conduct external security audit before going live
+1. **سر JWT** يجب أن يكون 32 حرفاً على الأقل
+2. **كلمات مرور PostgreSQL و Redis** يجب تغييرها في الإنتاج
+3. **CORS** مقيّد على أصلين فقط (واجهة المستخدم + الإدارة)
+4. **قاطع الدائرة** يحمي المستخدمين عند انقطاع تدفق بينانس
+5. **نظام الضمان** في P2P يحجز العملات تلقائياً
+6. **سجل التدقيق** دائم لكل إجراءات المديرين
+7. **واجهتان معزولتان** بالكامل (مستخدم + إدارة)
+8. **لا بوابة دفع خارجية** - النظام مغلق الحلقة
 
 ---
 
-## License
+## قائمة الإنتاج
 
-Proprietary. See `LICENSE` file (if present) or contact the maintainers.
+- [ ] توليد JWT_SECRET و كلمات مرور قوية
+- [ ] إعداد proxy عكسي (Caddy/Nginx) مع TLS
+- [ ] نسخ احتياطية لـ PostgreSQL
+- [ ] استمرارية Redis (AOF مفعّل)
+- [ ] Rate limiting middleware
+- [ ] مقاييس Prometheus
+- [ ] `cargo audit` دوري
+- [ ] `cargo clippy -- -D warnings` في CI
+- [ ] تجميع السجلات (Sentry / Loki)
+- [ ] 2FA للمديرين
+- [ ] قائمة IP المسموحة للوحة الإدارة
+- [ ] إشعارات بالبريد/الSMS
+- [ ] تدقيق أمني خارجي
+
+---
+
+## الترخيص
+
+خاص..contact المنشئ للحصول على التفاصيل.
