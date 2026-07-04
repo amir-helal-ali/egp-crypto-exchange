@@ -1,15 +1,15 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
-    import { tickers, availablePairs, circuitOpen, myPositions, myWallets, futuresMarkPrice, connectMarketWs } from '$lib/stores';
-    import { fmtEgp, fmtPrice, fmtQty, pairToAssets, mulDecimal, divDecimal } from '$lib/format';
+    import { tickers, availablePairs, circuitOpen, myPositions, myWallets, connectMarketWs, pushNotification } from '$lib/stores';
+    import { fmtEgp, fmtPrice, fmtQty, pairToAssets, mulDecimal } from '$lib/format';
     import CandlestickChart from '$lib/components/CandlestickChart.svelte';
-    import type { PositionSide, MarginMode, Position } from '$lib/types';
+    import type { PositionSide, MarginMode } from '$lib/types';
 
     $: pair = $page.params.pair || 'BTC_EGP';
     $: { base, quote } = pairToAssets(pair);
     $: ticker = $tickers[pair];
-    $: markPrice = ticker?.derived_egp_price || $futuresMarkPrice[pair] || '0';
+    $: markPrice = ticker?.derived_egp_price || '0';
 
     let side: PositionSide = 'long';
     let marginMode: MarginMode = 'isolated';
@@ -32,8 +32,15 @@
             return liq.toFixed(2);
         }
     })();
+    $: pnlPreview = (() => {
+        if (!quantity || !markPrice || Number(markPrice) === 0) return '0';
+        const value = Number(quantity) * 0.01; // 1% move
+        return value.toFixed(2);
+    })();
 
     $: myOpenPositions = $myPositions.filter((p) => p.pair === pair && p.status === 'open');
+    $: totalMargin = myOpenPositions.reduce((s, p) => s + Number(p.margin), 0);
+    $: totalPnl = myOpenPositions.reduce((s, p) => s + Number(p.unrealized_pnl), 0);
 
     async function openPosition() {
         if ($circuitOpen) {
@@ -57,9 +64,11 @@
                 margin,
             });
             success = 'تم فتح المركز بنجاح';
+            pushNotification({ type: 'success', title: 'تم فتح المركز', message: `${side === 'long' ? 'شراء' : 'بيع'} ${leverage}x بقيمة ${margin} ${quote}` });
             margin = '';
         } catch (e: any) {
             error = e.message || 'فشل فتح المركز';
+            pushNotification({ type: 'error', title: 'فشل فتح المركز', message: e.message });
         } finally {
             submitting = false;
         }
@@ -70,8 +79,9 @@
         try {
             const { futures } = await import('$lib/api');
             await futures.closePosition(id);
+            pushNotification({ type: 'success', title: 'تم إغلاق المركز', message: 'تم إغلاق المركز بنجاح' });
         } catch (e: any) {
-            alert(e.message);
+            pushNotification({ type: 'error', title: 'فشل الإغلاق', message: e.message });
         }
     }
 
@@ -83,19 +93,25 @@
 <svelte:head><title>عقود آجلة {pair.replace('_', '/')} · منصة الجنيه</title></svelte:head>
 
 <div class="space-y-4">
-    <!-- اختيار الزوج -->
-    <div class="card-compact flex items-center justify-between flex-wrap gap-2">
+    <!-- اختيار الزوج + مؤشرات -->
+    <div class="card-compact flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2 flex-wrap">
             {#each ($availablePairs.length ? $availablePairs : ['BTC_EGP', 'ETH_EGP', 'USDT_EGP']) as p}
                 <a href="/futures/{p}" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {p === pair ? 'bg-base-600 text-text-primary' : 'text-text-secondary hover:bg-base-700/50'}">
-                    {p.replace('_', '/')}
+                    {p.replace('_', '/')} <span class="text-xs text-accent-purple">F</span>
                 </a>
             {/each}
         </div>
         {#if ticker}
-            <div class="text-sm">
-                <span class="text-text-tertiary">سعر السوق:</span>
-                <span class="text-text-primary font-mono mr-1">{fmtEgp(markPrice)}</span>
+            <div class="flex items-center gap-3 text-sm">
+                <div class="text-right">
+                    <span class="text-text-tertiary text-xs">سعر السوق</span>
+                    <div class="text-text-primary font-mono font-bold">{fmtEgp(markPrice)}</div>
+                </div>
+                <div class="text-right">
+                    <span class="text-text-tertiary text-xs">PnL الإجمالي</span>
+                    <div class="font-mono font-bold {totalPnl >= 0 ? 'text-accent-green' : 'text-accent-red'}">{totalPnl >= 0 ? '+' : ''}{fmtEgp(totalPnl.toFixed(2))}</div>
+                </div>
             </div>
         {/if}
     </div>
@@ -106,9 +122,30 @@
             <CandlestickChart {pair} />
 
             <!-- تحذير العقود الآجلة -->
-            <div class="bg-accent-yellow/10 border border-accent-yellow/30 text-accent-yellow rounded-md px-4 py-2.5 text-xs">
-                <strong>تحذير:</strong> تداول العقود الآجلة ينطوي على مخاطر عالية. الرافعة المالية تضخم الأرباح والخسائر. قد تخسر كامل رأس مالك.
+            <div class="bg-accent-yellow/10 border border-accent-yellow/30 text-accent-yellow rounded-md px-4 py-2.5 text-xs flex items-start gap-2">
+                <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+                <div>
+                    <strong>تحذير:</strong> تداول العقود الآجلة ينطوي على مخاطر عالية. الرافعة المالية تضخم الأرباح والخسائر. قد تخسر كامل رأس مالك.
+                </div>
             </div>
+
+            <!-- ملخص المراكز -->
+            {#if myOpenPositions.length > 0}
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="card-compact">
+                        <div class="text-xs text-text-tertiary uppercase">عدد المراكز</div>
+                        <div class="text-xl font-mono font-bold text-text-primary mt-1">{myOpenPositions.length}</div>
+                    </div>
+                    <div class="card-compact">
+                        <div class="text-xs text-text-tertiary uppercase">الهامش المستخدم</div>
+                        <div class="text-xl font-mono font-bold text-accent-blue mt-1">{fmtEgp(totalMargin.toFixed(2))}</div>
+                    </div>
+                    <div class="card-compact">
+                        <div class="text-xs text-text-tertiary uppercase">PnL غير محقق</div>
+                        <div class="text-xl font-mono font-bold {totalPnl >= 0 ? 'text-accent-green' : 'text-accent-red'} mt-1">{totalPnl >= 0 ? '+' : ''}{fmtEgp(totalPnl.toFixed(2))}</div>
+                    </div>
+                </div>
+            {/if}
 
             <!-- مراكزي المفتوحة -->
             <div class="card-default">
@@ -122,7 +159,7 @@
                                 <tr>
                                     <th>الجهة</th>
                                     <th>الرافعة</th>
-                                    <th class="num-cell">الهامش</th>
+                                    <th>الهامش</th>
                                     <th class="num-cell">الحجم</th>
                                     <th class="num-cell">سعر الدخول</th>
                                     <th class="num-cell">سعر السوق</th>
@@ -134,15 +171,23 @@
                             <tbody>
                                 {#each myOpenPositions as p}
                                     {@const pnl = Number(p.unrealized_pnl)}
+                                    {@const pnlPct = Number(p.margin) > 0 ? (pnl / Number(p.margin) * 100).toFixed(2) : '0'}
                                     <tr>
-                                        <td><span class={p.side === 'long' ? 'text-accent-green' : 'text-accent-red'}>{p.side === 'long' ? 'شراء' : 'بيع'} {p.leverage}x</span></td>
+                                        <td>
+                                            <span class={p.side === 'long' ? 'text-accent-green' : 'text-accent-red'}>
+                                                {p.side === 'long' ? 'شراء' : 'بيع'} {p.leverage}x
+                                            </span>
+                                        </td>
                                         <td class="text-text-secondary">{p.margin_mode === 'isolated' ? 'معزول' : 'متقاطع'}</td>
                                         <td class="num-cell">{fmtEgp(p.margin)}</td>
                                         <td class="num-cell">{fmtQty(p.quantity, 8)}</td>
                                         <td class="num-cell">{fmtPrice(p.entry_price)}</td>
                                         <td class="num-cell">{fmtPrice(p.mark_price)}</td>
                                         <td class="num-cell text-accent-yellow">{fmtPrice(p.liquidation_price)}</td>
-                                        <td class="num-cell {pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}">{pnl >= 0 ? '+' : ''}{fmtEgp(pnl.toFixed(2))}</td>
+                                        <td class="num-cell {pnl >= 0 ? 'text-accent-green' : 'text-accent-red'} font-semibold">
+                                            {pnl >= 0 ? '+' : ''}{fmtEgp(pnl.toFixed(2))}
+                                            <div class="text-[10px] opacity-70">({pnlPct}%)</div>
+                                        </td>
                                         <td><button class="text-accent-red text-xs hover:underline" on:click={() => closePosition(p.id)}>إغلاق</button></td>
                                     </tr>
                                 {/each}
@@ -197,7 +242,7 @@
                 <!-- الهامش -->
                 <div class="mb-3">
                     <label class="label" for="margin">الهامش ({quote})</label>
-                    <input id="margin" type="number" step="any" min="0" bind:value={margin} class="input" placeholder="0.00" />
+                    <input id="margin" type="number" step="any" min="0" bind:value={margin} class="input" placeholder="0.00" dir="ltr" />
                 </div>
 
                 <!-- ملخص -->
@@ -213,6 +258,10 @@
                     <div class="flex justify-between">
                         <span class="text-text-tertiary">سعر التصفية المتوقع</span>
                         <span class="num-cell text-accent-yellow">{estimatedLiquidation || '—'}</span>
+                    </div>
+                    <div class="flex justify-between border-t border-base-700 pt-1.5 mt-1.5">
+                        <span class="text-text-tertiary">PnL عند حركة 1%</span>
+                        <span class="num-cell text-accent-green">+{pnlPreview}</span>
                     </div>
                 </div>
 

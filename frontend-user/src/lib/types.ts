@@ -197,6 +197,15 @@ export interface WsP2POfferUpdate {
     type: 'p2p_offer_update';
     offer: P2POffer;
 }
+export interface WsP2PTradeUpdate {
+    type: 'p2p_trade_update';
+    trade: P2PTrade;
+}
+export interface WsP2PMessage {
+    type: 'p2p_message';
+    trade_id: string;
+    message: P2PMessage;
+}
 export interface WsFuturesTick {
     type: 'futures_tick';
     pair: string;
@@ -207,7 +216,7 @@ export interface WsFuturesTick {
 
 export type WsMessage = WsHello | WsTicker | WsTrade | WsOrderbook | WsCircuitBreaker
     | WsOrderUpdate | WsWalletUpdate | WsManualTxUpdate | WsPositionUpdate
-    | WsP2POfferUpdate | WsFuturesTick;
+    | WsP2POfferUpdate | WsP2PTradeUpdate | WsP2PMessage | WsFuturesTick;
 
 // --- العقود الآجلة ---
 export type PositionSide = 'long' | 'short';

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { tickers, availablePairs, circuitOpen, myOrders, myWallets } from '$lib/stores';
+    import { tickers, availablePairs, circuitOpen, myOrders, myWallets, connectMarketWs } from '$lib/stores';
     import { wallet } from '$lib/api';
     import { fmtEgp, fmtPrice, fmtQty } from '$lib/format';
     import type { Wallet } from '$lib/types';
@@ -9,11 +9,14 @@
 
     let loading = true;
     let error = '';
+    let wsConnected = false;
 
     onMount(async () => {
         try {
+            await connectMarketWs();
             const ws = await wallet.list();
             myWallets.set(ws);
+            wsConnected = true;
         } catch (e: any) {
             if (e.status !== 401) error = e.message;
         } finally {

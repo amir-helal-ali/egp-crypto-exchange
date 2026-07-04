@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { circuitOpen, tickers, myWallets } from '$lib/stores';
+    import { circuitOpen, tickers, myWallets, pushNotification } from '$lib/stores';
     import { fmtEgp, fmtQty, pairToAssets, mulDecimal, divDecimal } from '$lib/format';
     import type { OrderSide, OrderType } from '$lib/types';
 
@@ -78,6 +78,11 @@
             });
             success = `تم تنفيذ الأمر — ${res.trades.length} صفقة، ${res.remaining} متبقي`;
             dispatch('placed', res);
+            pushNotification({
+                type: 'success',
+                title: 'تم تنفيذ الأمر',
+                message: `${side === 'buy' ? 'شراء' : 'بيع'} ${quantity} ${base} — ${res.trades.length} صفقة`,
+            });
             quantity = '';
         } catch (e: any) {
             error = e.message || 'فشل تنفيذ الأمر';

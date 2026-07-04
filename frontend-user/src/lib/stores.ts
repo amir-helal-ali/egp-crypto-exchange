@@ -141,19 +141,23 @@ async function refreshInitialData() {
     const token = get(accessToken);
     if (!token) return;
     try {
-        const { trading, wallet } = await import('$lib/api');
-        const [orders, trades, wallets, deps, wds] = await Promise.all([
+        const { trading, wallet, futures, p2p } = await import('$lib/api');
+        const [orders, trades, wallets, deps, wds, positions, p2pTrades] = await Promise.all([
             trading.listOrders(),
             trading.listMyTrades(),
             wallet.list(),
             wallet.listDeposits(),
             wallet.listWithdrawals(),
+            futures.listPositions().catch(() => []),
+            p2p.listMyTrades().catch(() => []),
         ]);
         myOrders.set(orders);
         myTrades.set(trades);
         myWallets.set(wallets);
         myDeposits.set(deps);
         myWithdrawals.set(wds);
+        myPositions.set(positions);
+        myP2PTrades.set(p2pTrades);
     } catch (e) {
         console.warn('فشل تحميل البيانات الأولية', e);
     }

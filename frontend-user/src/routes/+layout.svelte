@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
     import { navigate } from '$app/navigation';
-    import { user, isAuthenticated, connectMarketWs, disconnectMarketWs, clearSession, circuitOpen } from '$lib/stores';
+    import { user, isAuthenticated, connectMarketWs, disconnectMarketWs, clearSession, circuitOpen, notifications } from '$lib/stores';
     import { _t, lang, setLang } from '$lib/i18n';
     import CircuitBanner from '$lib/components/CircuitBanner.svelte';
     import NotificationStack from '$lib/components/NotificationStack.svelte';
@@ -28,7 +28,7 @@
         { href: '/futures/BTC_EGP', label: 'العقود الآجلة', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
         { href: '/p2p', label: 'تداول فردي', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
         { href: '/wallet', label: 'المحفظة', icon: 'M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3' },
-        { href: '/history', label: 'السجل', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+        { href: '/activity', label: 'نشاطي', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
     ];
 
     $: path = $page.url.pathname;
@@ -81,6 +81,18 @@
                     <div class="hidden md:flex items-center gap-1.5 text-xs text-accent-red bg-accent-red/10 px-2 py-1 rounded-full border border-accent-red/30">
                         <span class="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse"></span>
                         تدفق الأسعار متوقف
+                    </div>
+                {/if}
+                {#if $notifications.length > 0}
+                    <div class="relative">
+                        <a href="/activity" class="relative p-1.5 rounded-md hover:bg-base-700/50 transition-colors" aria-label="الإشعارات">
+                            <svg class="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <span class="absolute -top-0.5 -left-0.5 w-4 h-4 bg-accent-red text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                                {$notifications.length > 9 ? '9+' : $notifications.length}
+                            </span>
+                        </a>
                     </div>
                 {/if}
                 <button on:click={toggleLang} class="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded border border-base-600 hover:border-base-500 transition-colors">
