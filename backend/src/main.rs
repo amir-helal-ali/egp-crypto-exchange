@@ -138,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("received Ctrl-C, shutting down");
     };
 
-    serve(listener, router)
+    serve(listener, router.into_make_service())
         .with_graceful_shutdown(shutdown)
         .await?;
 

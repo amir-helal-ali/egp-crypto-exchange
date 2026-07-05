@@ -36,8 +36,8 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 
         // Public market data
         .route("/api/market/tickers", get(trading::public_tickers))
-        .route("/api/market/orderbook/:pair", get(trading::public_orderbook))
-        .route("/api/market/trades/:pair", get(trading::public_recent_trades))
+        .route("/api/market/orderbook/{pair}", get(trading::public_orderbook))
+        .route("/api/market/trades/{pair}", get(trading::public_recent_trades))
         .route("/api/market/circuit", get(trading::circuit_status))
         .route("/api/market/ws", get(ws::market_ws_handler))
 
@@ -45,7 +45,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/user/me", get(user::me))
         .route("/api/user/wallets", get(wallet::list_wallets))
         .route("/api/user/orders", get(trading::list_orders).post(trading::place_order))
-        .route("/api/user/orders/:id", delete(trading::cancel_order))
+        .route("/api/user/orders/{id}", delete(trading::cancel_order))
         .route("/api/user/trades", get(trading::list_my_trades))
         .route("/api/user/deposits", post(wallet::request_deposit).get(wallet::list_my_deposits))
         .route("/api/user/withdrawals", post(wallet::request_withdrawal).get(wallet::list_my_withdrawals))
@@ -54,29 +54,29 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 
         // Futures - العقود الآجلة
         .route("/api/futures/positions", get(futures::list_positions).post(futures::open_position))
-        .route("/api/futures/positions/:id/close", post(futures::close_position))
+        .route("/api/futures/positions/{id}/close", post(futures::close_position))
 
         // P2P - التداول بين الأفراد
         .route("/api/p2p/offers", get(p2p::list_offers).post(p2p::create_offer))
         .route("/api/p2p/offers/mine", get(p2p::list_my_offers))
-        .route("/api/p2p/offers/:id", get(p2p::get_offer))
-        .route("/api/p2p/offers/:id/status", post(p2p::update_offer_status))
+        .route("/api/p2p/offers/{id}", get(p2p::get_offer))
+        .route("/api/p2p/offers/{id}/status", post(p2p::update_offer_status))
         .route("/api/p2p/trades", post(p2p::start_trade).get(p2p::list_my_trades))
-        .route("/api/p2p/trades/:id", get(p2p::get_trade))
-        .route("/api/p2p/trades/:id/paid", post(p2p::confirm_paid))
-        .route("/api/p2p/trades/:id/release", post(p2p::release_crypto))
-        .route("/api/p2p/trades/:id/cancel", post(p2p::cancel_trade))
-        .route("/api/p2p/trades/:id/messages", get(p2p::list_messages).post(p2p::send_message))
+        .route("/api/p2p/trades/{id}", get(p2p::get_trade))
+        .route("/api/p2p/trades/{id}/paid", post(p2p::confirm_paid))
+        .route("/api/p2p/trades/{id}/release", post(p2p::release_crypto))
+        .route("/api/p2p/trades/{id}/cancel", post(p2p::cancel_trade))
+        .route("/api/p2p/trades/{id}/messages", get(p2p::list_messages).post(p2p::send_message))
         .route("/api/p2p/overview", get(p2p::p2p_overview))
 
         // Admin routes (separate auth scope)
         .route("/api/admin/overview", get(admin::overview))
         .route("/api/admin/users", get(admin::list_users))
-        .route("/api/admin/users/:id", get(admin::get_user))
-        .route("/api/admin/users/:id/status", put(admin::update_user_status))
+        .route("/api/admin/users/{id}", get(admin::get_user))
+        .route("/api/admin/users/{id}/status", put(admin::update_user_status))
         .route("/api/admin/manual_tx", get(admin::list_manual_tx))
-        .route("/api/admin/manual_tx/:id", get(admin::get_manual_tx))
-        .route("/api/admin/manual_tx/:id/review", post(admin::review_manual_tx))
+        .route("/api/admin/manual_tx/{id}", get(admin::get_manual_tx))
+        .route("/api/admin/manual_tx/{id}/review", post(admin::review_manual_tx))
         .route("/api/admin/liquidity", get(admin::liquidity))
         .route("/api/admin/orders", get(admin::list_all_orders))
         .route("/api/admin/trades", get(admin::list_all_trades))
@@ -89,13 +89,13 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 
         // Admin wallet management - إدارة المحافظ
         .route("/api/admin/wallets/adjust", post(admin::adjust_wallet))
-        .route("/api/admin/users/:id/wallets", get(admin::list_user_wallets))
+        .route("/api/admin/users/{id}/wallets", get(admin::list_user_wallets))
 
         // Admin currency & pair management - إدارة العملات والأزواج
         .route("/api/admin/currencies", get(settings::list_currencies).post(settings::create_currency))
-        .route("/api/admin/currencies/:id", put(settings::update_currency).delete(settings::delete_currency))
+        .route("/api/admin/currencies/{id}", put(settings::update_currency).delete(settings::delete_currency))
         .route("/api/admin/pairs", get(settings::list_pairs).post(settings::create_pair))
-        .route("/api/admin/pairs/:id", put(settings::update_pair).delete(settings::delete_pair))
+        .route("/api/admin/pairs/{id}", put(settings::update_pair).delete(settings::delete_pair))
         .route("/api/admin/settings", get(settings::get_settings).put(settings::update_settings))
 
         .with_state(state)
@@ -144,10 +144,6 @@ async fn health() -> &'static str {
     "OK"
 }
 
-async fn health_ready(state: axum::extract::State<Arc<AppState>>) -> &'static str {
-    // Verify DB and Redis are reachable.
-    let _ = sqlx::query("SELECT 1").execute(&state.db).await;
-    let mut conn = state.queue.conn.clone();
-    let _: Result<String, _> = redis::cmd("PING").query_async(&mut conn).await;
+async fn health_ready() -> &'static str {
     "READY"
 }

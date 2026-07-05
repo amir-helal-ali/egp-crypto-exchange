@@ -137,7 +137,7 @@ where
 }
 
 /// Middleware that ensures the request carries a valid (any-role) JWT.
-pub async fn require_auth(req: Request, next: axum::middleware::Next) -> Response {
+pub async fn require_auth(req: Request, next: axum::middleware::Next<Arc<crate::AppState>>) -> Response {
     next.run(req).await
 }
 
