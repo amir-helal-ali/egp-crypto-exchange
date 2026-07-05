@@ -36,7 +36,7 @@ export const ar = {
     pair: 'الزوج',
     price: 'السعر',
     quantity: 'الكمية',
-    filled: 'المُنفذ',
+    filled_qty: 'المُنفذ',
     remaining: 'المتبقي',
     created: 'تاريخ الإنشاء',
     completed: 'مكتمل',

@@ -5,6 +5,14 @@ export const fmtNum = (v: string | number | null | undefined, dp = 2): string =>
     if (v === null || v === undefined || v === '') return '—';
     try { return new Decimal(v).toFormat(dp); } catch { return String(v); }
 };
+export const fmtPrice = (v: string | number | null | undefined): string => {
+    if (v === null || v === undefined || v === '') return '—';
+    try {
+        const d = new Decimal(v);
+        if (d.lt(1)) return d.toFormat(8);
+        return d.toFormat(2);
+    } catch { return String(v); }
+};
 export const fmtEgp = (v: string | number | null | undefined): string => {
     if (v === null || v === undefined || v === '') return '—';
     try { return `EGP ${new Decimal(v).toFormat(2)}`; } catch { return String(v); }

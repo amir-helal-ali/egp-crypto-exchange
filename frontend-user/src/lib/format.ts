@@ -77,6 +77,21 @@ export const fmtTime = (iso: string | null | undefined): string => {
     }
 };
 
+export const fmtRelative = (iso: string | null | undefined): string => {
+    if (!iso) return '—';
+    try {
+        const d = new Date(iso).getTime();
+        const now = Date.now();
+        const sec = Math.floor((now - d) / 1000);
+        if (sec < 60) return `منذ ${sec} ثانية`;
+        if (sec < 3600) return `منذ ${Math.floor(sec / 60)} دقيقة`;
+        if (sec < 86400) return `منذ ${Math.floor(sec / 3600)} ساعة`;
+        return `منذ ${Math.floor(sec / 86400)} يوم`;
+    } catch {
+        return String(iso);
+    }
+};
+
 export const addDecimal = (a: string, b: string): string => {
     try { return new Decimal(a).plus(b).toString(); } catch { return '0'; }
 };
