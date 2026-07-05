@@ -9,3 +9,4 @@ dist/
 *.md
 Dockerfile
 .dockerignore
+npm-debug.log*

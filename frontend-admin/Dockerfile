@@ -8,10 +8,16 @@ FROM node:20-alpine AS builder
 WORKDIR /build
 
 COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund
+RUN npm install --no-audit --no-fund --ignore-scripts
 
 COPY . .
+
+# Generate SvelteKit types (.svelte-kit/tsconfig.json) before building.
+RUN npx svelte-kit sync
+
 ENV NODE_ENV=production
+ENV PUBLIC_API_URL=http://localhost:8080
+ENV PUBLIC_WS_URL=ws://localhost:8080
 RUN npm run build
 
 # ============================================================================
@@ -27,10 +33,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund
+RUN npm install --omit=dev --no-audit --no-fund --ignore-scripts
 
 COPY --from=builder /build/build ./build
-COPY --from=builder /build/.svelte-kit/output ./.svelte-kit/output
 
 RUN addgroup -S app && adduser -S app -G app
 USER app

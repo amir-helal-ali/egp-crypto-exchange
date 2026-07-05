@@ -17,6 +17,9 @@ const config = {
       $components: './src/lib/components',
     },
   },
+  vitePlugin: {
+    inspector: false,
+  },
 };
 
 export default config;
