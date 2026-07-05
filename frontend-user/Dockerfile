@@ -7,9 +7,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /build
 
-# Install dependencies (cached layer).
-COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund --ignore-scripts
+# Install dependencies (cached layer). Use npm ci for reproducible builds.
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 # Copy source.
 COPY . .
@@ -36,8 +36,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy package files and install only production deps.
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
 
 # Copy the built output.
 COPY --from=builder /build/build ./build
