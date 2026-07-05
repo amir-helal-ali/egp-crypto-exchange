@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { trades } from '$lib/api';
     import { fmtPrice, fmtQty, fmtEgp, fmtDate, fmtRelative } from '$lib/format';
+    import { exportToCSV } from '$lib/csv';
     import type { Trade } from '$lib/types';
 
     let items: Trade[] = [];
@@ -23,6 +24,17 @@
     $: volume24h = items
         .filter((t) => Date.now() - new Date(t.executed_at).getTime() < 86400000)
         .reduce((sum, t) => sum + Number(t.price) * Number(t.quantity), 0);
+
+    function exportCSV() {
+        exportToCSV('الصفقات', [
+            'المعرف', 'الزوج', 'الجهة', 'السعر', 'الكمية', 'القيمة', 'رسوم المنفذ', 'رسوم الصانع', 'الوقت'
+        ], items.map((t) => [
+            t.id, t.pair, t.taker_side, t.price, t.quantity,
+            (Number(t.price) * Number(t.quantity)).toFixed(2),
+            t.taker_fee, t.maker_fee,
+            new Date(t.executed_at).toLocaleString('ar-EG')
+        ]));
+    }
 </script>
 
 <svelte:head><title>الصفقات · الإدارة</title></svelte:head>
@@ -37,6 +49,10 @@
             <span class="text-text-tertiary">حجم 24 ساعة:</span>
             <span class="num-cell text-accent-green font-semibold mr-1">{fmtEgp(volume24h.toFixed(2))}</span>
         </div>
+        <button class="btn-ghost text-xs" on:click={exportCSV} disabled={items.length === 0}>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            تصدير CSV
+        </button>
     </div>
 
     {#if loading}

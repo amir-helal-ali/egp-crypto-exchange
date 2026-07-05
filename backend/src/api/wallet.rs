@@ -159,21 +159,17 @@ pub async fn list_my_withdrawals(
     Ok(Json(withdrawals))
 }
 
-/// WebSocket endpoint: live updates for the user's manual transactions.
-/// Returns 200 with instructions (the actual upgrade is handled in ws.rs).
+/// WebSocket endpoint for manual tx status — delegates to the unified WS endpoint.
+/// نستخدم نقطة النهاية الموحدة /api/market/ws لكل التحديثات اللحظية.
 pub async fn withdrawal_status_ws(
     _auth: AuthUser,
     State(_state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    axum::response::Response::from(
-        (
-            axum::http::StatusCode::OK,
-            Json(json!({
-                "message": "use the /api/market/ws endpoint with auth token to subscribe to all events"
-            })),
-        )
-            .into_response(),
-    )
+    Json(json!({
+        "endpoint": "/api/market/ws",
+        "message": "استخدم نقطة النهاية الموحدة /api/market/ws?token=... لتلقي كل التحديثات اللحظية",
+        "events": ["manual_tx_update", "wallet_update", "order_update", "position_update", "p2p_trade_update"]
+    }))
 }
 
 pub async fn ledger(

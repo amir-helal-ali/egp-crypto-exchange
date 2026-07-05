@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { orders } from '$lib/api';
     import { fmtPrice, fmtQty, fmtDate, fmtRelative } from '$lib/format';
+    import { exportToCSV } from '$lib/csv';
     import type { Order } from '$lib/types';
 
     let items: Order[] = [];
@@ -21,6 +22,16 @@
     onMount(load);
 
     $: openCount = items.filter((o) => o.status === 'open' || o.status === 'partially_filled').length;
+
+    function exportCSV() {
+        exportToCSV('الاوامر', [
+            'المعرف', 'المستخدم', 'الزوج', 'الجهة', 'النوع', 'السعر', 'الكمية', 'المنفذ', 'الحالة', 'التاريخ'
+        ], items.map((o) => [
+            o.id, o.user_id, o.pair, o.side, o.order_type,
+            o.price || '-', o.quantity, o.filled_quantity,
+            o.status, new Date(o.created_at).toLocaleString('ar-EG')
+        ]));
+    }
 </script>
 
 <svelte:head><title>الأوامر · الإدارة</title></svelte:head>
@@ -35,6 +46,10 @@
             <span class="pill-warning">{openCount} مفتوح</span>
             <span class="ml-2 text-text-tertiary">{items.length} إجمالي</span>
         </div>
+        <button class="btn-ghost text-xs" on:click={exportCSV} disabled={items.length === 0}>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            تصدير CSV
+        </button>
     </div>
 
     {#if loading}
