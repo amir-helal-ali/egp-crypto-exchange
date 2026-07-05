@@ -6,7 +6,7 @@
     } from '$lib/stores';
     import { fmtEgp, fmtQty, fmtPrice, fmtDate, fmtRelative } from '$lib/format';
 
-    let tab: 'overview' | 'orders' | 'trades' | 'deposits' | 'withdrawals' | 'positions' | 'p2p' = 'overview';
+    let tab: string = 'overview';
     let loading = true;
 
     onMount(async () => {
@@ -107,7 +107,7 @@
             ] as [key, label]}
                 <button
                     class="py-2 px-3 text-sm font-medium border-b-2 whitespace-nowrap {tab === key ? 'border-accent-blue text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'}"
-                    on:click={() => (tab = key as any)}>
+                    on:click={() => (tab = key)}>
                     {label}
                 </button>
             {/each}

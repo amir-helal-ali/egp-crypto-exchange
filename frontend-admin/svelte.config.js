@@ -9,9 +9,6 @@ const config = {
       precompress: false,
       envPrefix: 'PUBLIC_',
     }),
-    csrf: {
-      checkOrigin: true,
-    },
     alias: {
       $lib: './src/lib',
       $components: './src/lib/components',

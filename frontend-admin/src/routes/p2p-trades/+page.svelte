@@ -5,7 +5,7 @@
     let trades: any[] = [];
     let loading = true;
     let error = '';
-    let filter: 'all' | 'pending' | 'paid' | 'released' | 'cancelled' | 'disputed' | 'completed' = 'all';
+    let filter: string = 'all';
 
     const API_BASE: string = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8080';
 
@@ -80,7 +80,7 @@
         {#each ['all', 'pending', 'paid', 'released', 'cancelled', 'disputed', 'completed'] as f}
             <button
                 class="px-3 py-1.5 rounded-md font-medium {filter === f ? 'bg-base-600 text-text-primary' : 'text-text-tertiary hover:bg-base-700/50'}"
-                on:click={() => (filter = f as any)}>
+                on:click={() => (filter = f)}>
                 {f === 'all' ? 'الكل' : statusLabel(f)}
             </button>
         {/each}

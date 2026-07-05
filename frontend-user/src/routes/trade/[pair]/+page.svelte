@@ -11,7 +11,7 @@
     import OrderForm from '$lib/components/OrderForm.svelte';
 
     $: pair = $page.params.pair || 'BTC_EGP';
-    $: { base, quote } = pairToAssets(pair);
+    $: ({ base, quote } = pairToAssets(pair));
     $: ob = $orderbooks[pair];
     $: rt = $recentTrades[pair] || [];
     $: ticker = $tickers[pair];

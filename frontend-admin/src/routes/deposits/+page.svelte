@@ -7,7 +7,7 @@
     let items: Array<{ tx: ManualTransaction; queue_position: number }> = [];
     let loading = true;
     let error = '';
-    let filter: 'all' | ManualTxStatus = 'pending';
+    let filter: string = 'pending';
     let selected: ManualTransaction | null = null;
     let reviewNote = '';
     let reviewStatus: ManualTxStatus = 'approved';
@@ -17,7 +17,7 @@
 
     async function load() {
         try {
-            const params = filter === 'all' ? { tx_type: 'deposit' as const } : { tx_type: 'deposit' as const, status: filter };
+            const params = filter === 'all' ? { tx_type: 'deposit' as const } : { tx_type: 'deposit' as const, status: filter as ManualTxStatus };
             const res = await manualTx.list(params);
             items = res.items;
         } catch (e: any) {
@@ -69,7 +69,7 @@
             {#each ['pending', 'under_review', 'approved', 'completed', 'rejected', 'all'] as f}
                 <button
                     class="px-3 py-1.5 rounded-md font-medium {filter === f ? 'bg-base-600 text-text-primary' : 'text-text-tertiary hover:bg-base-700/50'}"
-                    on:click={() => { filter = f as any; load(); }}>
+                    on:click={() => { filter = f; load(); }}>
                     {f === 'all' ? 'الكل' : f === 'pending' ? 'معلق' : f === 'under_review' ? 'قيد المراجعة' : f === 'approved' ? 'موافق' : f === 'completed' ? 'مكتمل' : 'مرفوض'}
                 </button>
             {/each}

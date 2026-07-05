@@ -8,7 +8,7 @@
     let total = 0;
     let loading = true;
     let error = '';
-    let filter: 'all' | UserStatus = 'all';
+    let filter: string = 'all';
     let offset = 0;
     const limit = 50;
 
@@ -91,7 +91,7 @@
             const res = await users.list({
                 offset,
                 limit,
-                status: filter === 'all' ? undefined : filter,
+                status: filter === 'all' ? undefined : (filter as UserStatus),
             });
             items = res.users || [];
             total = res.total;
@@ -150,7 +150,7 @@
         {#each [['all', 'الكل'], ['active', 'نشط'], ['suspended', 'موقوف'], ['banned', 'محظور'], ['pending_kyc', 'بانتظار التحقق']] as [v, label]}
             <button
                 class="px-3 py-1.5 rounded-md font-medium {filter === v ? 'bg-base-600 text-text-primary' : 'text-text-tertiary hover:bg-base-700/50'}"
-                on:click={() => { filter = v as any; offset = 0; load(); }}>
+                on:click={() => { filter = v; offset = 0; load(); }}>
                 {label}
             </button>
         {/each}

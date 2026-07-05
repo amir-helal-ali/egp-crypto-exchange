@@ -7,7 +7,7 @@
     import type { PositionSide, MarginMode } from '$lib/types';
 
     $: pair = $page.params.pair || 'BTC_EGP';
-    $: { base, quote } = pairToAssets(pair);
+    $: ({ base, quote } = pairToAssets(pair));
     $: ticker = $tickers[pair];
     $: markPrice = ticker?.derived_egp_price || '0';
 

@@ -7,7 +7,7 @@
     let offers: P2POffer[] = [];
     let loading = true;
     let error = '';
-    let sideFilter: 'all' | 'buy' | 'sell' = 'all';
+    let sideFilter: string = 'all';
     let assetFilter = '';
     let paymentFilter = '';
 
@@ -25,7 +25,7 @@
     async function load() {
         try {
             offers = await p2p.listOffers({
-                side: sideFilter === 'all' ? undefined : sideFilter,
+                side: sideFilter === 'all' ? undefined : (sideFilter as 'buy' | 'sell'),
                 asset: assetFilter || undefined,
                 payment_method: paymentFilter || undefined,
             });
@@ -60,7 +60,7 @@
             {#each [['all', 'الكل'], ['buy', 'شراء بالجنيه'], ['sell', 'بيع مقابل جنيه']] as [v, label]}
                 <button
                     class="px-3 py-1.5 rounded-md text-xs font-medium {sideFilter === v ? 'bg-base-600 text-text-primary' : 'text-text-secondary hover:bg-base-700/50'}"
-                    on:click={() => { sideFilter = v as any; load(); }}>
+                    on:click={() => { sideFilter = v; load(); }}>
                     {label}
                 </button>
             {/each}
