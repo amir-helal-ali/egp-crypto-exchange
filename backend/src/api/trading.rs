@@ -276,7 +276,7 @@ pub async fn cancel_order(
         .cloned()
         .ok_or_else(|| AppError::BadRequest("unknown pair".into()))?;
 
-    if let Some(resting) = cancelled {
+    if let Some(ref resting) = cancelled {
         let asset = match order.side {
             OrderSide::Sell => pair_meta.base.clone(),
             OrderSide::Buy => pair_meta.quote.clone(),
@@ -307,7 +307,7 @@ pub async fn cancel_order(
         "order": updated_order,
     }));
     // تحديث المحفظة بعد الاسترجاع
-    if let Some(resting) = &cancelled {
+    if cancelled.is_some() {
         let asset = match order.side {
             OrderSide::Sell => pair_meta.base.clone(),
             OrderSide::Buy => pair_meta.quote.clone(),
@@ -318,7 +318,6 @@ pub async fn cancel_order(
                 "wallet": w,
             }));
         }
-        let _ = resting;
     }
 
     Ok(Json(json!({"cancelled": order_id})))

@@ -4,7 +4,7 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::{not_found, AppError, AppResult};
+use crate::error::{AppError, AppResult};
 use crate::models::{User, UserRole, UserStatus};
 
 pub async fn create(

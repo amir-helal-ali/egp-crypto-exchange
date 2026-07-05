@@ -134,8 +134,7 @@ pub async fn create_pair(
     .await?;
 
     // إعادة تحميل أزواج التداول في الذاكرة
-    let pairs = db::currencies::list_pairs(&state.db, true).await?;
-    *state.trade_pairs.write() = pairs;
+    reload_trade_pairs(&state).await;
 
     Ok(Json(row))
 }
@@ -179,8 +178,7 @@ pub async fn update_pair(
     .await?;
 
     // إعادة تحميل أزواج التداول في الذاكرة
-    let pairs = db::currencies::list_pairs(&state.db, true).await?;
-    *state.trade_pairs.write() = pairs;
+    reload_trade_pairs(&state).await;
 
     Ok(Json(row))
 }
@@ -206,8 +204,7 @@ pub async fn delete_pair(
 ) -> AppResult<Json<Value>> {
     db::currencies::delete_pair(&state.db, id).await?;
 
-    let pairs = db::currencies::list_pairs(&state.db, true).await?;
-    *state.trade_pairs.write() = pairs;
+    reload_trade_pairs(&state).await;
 
     Ok(Json(serde_json::json!({"deleted": id})))
 }
@@ -250,4 +247,20 @@ pub async fn update_settings(
         db::settings::set(&state.db, "min_egp_withdrawal", &serde_json::json!(min.to_string())).await?;
     }
     Ok(Json(serde_json::json!({"updated": true})))
+}
+
+/// Helper: إعادة تحميل أزواج التداول من قاعدة البيانات إلى الذاكرة
+async fn reload_trade_pairs(state: &Arc<AppState>) {
+    if let Ok(pairs) = db::currencies::list_pairs(&state.db, true).await {
+        let trade_pairs: Vec<crate::services::TradePair> = pairs
+            .into_iter()
+            .map(|p| crate::services::TradePair {
+                pair: p.pair,
+                base: p.base_asset,
+                quote: p.quote_asset,
+                binance_symbol: p.binance_symbol,
+            })
+            .collect();
+        *state.trade_pairs.write() = trade_pairs;
+    }
 }

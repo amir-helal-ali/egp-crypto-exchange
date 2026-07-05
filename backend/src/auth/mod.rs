@@ -93,10 +93,7 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts<'a, 'b>(
-        parts: &'a mut Parts,
-        state: &'b S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let app_state = <Arc<crate::AppState> as axum::extract::FromRef<S>>::from_ref(state);
 
         let auth_header = parts
@@ -130,10 +127,7 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts<'a, 'b>(
-        parts: &'a mut Parts,
-        state: &'b S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let user = AuthUser::from_request_parts(parts, state).await?;
         if user.role != UserRole::Admin {
             return Err(AppError::Forbidden("admin role required".into()));

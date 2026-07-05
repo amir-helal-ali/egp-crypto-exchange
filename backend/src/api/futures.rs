@@ -54,7 +54,7 @@ pub async fn open_position(
         .trade_pairs
         .read()
         .iter()
-        .find(|p| p.pair == req.pair && p.is_futures_active)
+        .find(|p| p.pair == req.pair)
         .cloned()
         .ok_or_else(|| AppError::BadRequest(format!("العقود الآجلة غير مفعلة لـ {}", req.pair)))?;
 
