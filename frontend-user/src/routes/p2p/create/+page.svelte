@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { p2p } from '$lib/api';
     import { tickers } from '$lib/stores';
     import { fmtEgp } from '$lib/format';
@@ -59,7 +59,7 @@
                 payment_methods: selectedPayments,
                 time_limit_min: timeLimit,
             });
-            await navigate('/p2p', { replace: true });
+            await goto('/p2p', { replace: true });
         } catch (e: any) {
             error = e.message;
         } finally {

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { p2p } from '$lib/api';
     import { tickers } from '$lib/stores';
     import { fmtEgp, fmtQty, fmtDate, fmtRelative } from '$lib/format';
@@ -50,7 +50,7 @@
                 amount,
                 payment_method: selectedPayment,
             });
-            await navigate(`/p2p/trade/${trade.id}`, { replace: true });
+            await goto(`/p2p/trade/${trade.id}`, { replace: true });
         } catch (e: any) {
             error = e.message;
         } finally {

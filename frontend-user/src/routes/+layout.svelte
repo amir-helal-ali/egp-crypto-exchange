@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { user, isAuthenticated, connectMarketWs, disconnectMarketWs, clearSession, circuitOpen, notifications } from '$lib/stores';
     import { _t, lang, setLang } from '$lib/i18n';
     import CircuitBanner from '$lib/components/CircuitBanner.svelte';
@@ -18,7 +18,7 @@
 
     async function logout() {
         clearSession();
-        await navigate('/login', { replace: true });
+        await goto('/login', { replace: true });
     }
 
     const navItems = [

@@ -1,0 +1,453 @@
+     1→cd ~/amir/egp-crypto-exchange
+     2→git pull origin main
+     3→sudo docker compose down -v
+     4→sudo docker compose build --no-cache frontend-user frontend-admin
+     5→sudo docker compose up -d
+     6→From https://github.com/amir-helal-ali/egp-crypto-exchange
+     7→ * branch            main       -> FETCH_HEAD
+     8→Already up to date.
+     9→[sudo: authenticate] Password: 
+    10→[+] Building 89.4s (27/31)                                                      
+    11→ => [internal] load local bake definitions                                 0.0s
+    12→ => => reading from stdin 1.65kB                                           0.0s
+    13→ => [frontend-admin internal] load build definition from Dockerfile        0.1s
+    14→ => => transferring dockerfile: 1.31kB                                     0.0s
+    15→ => [frontend-user internal] load build definition from Dockerfile         0.0s
+    16→ => => transferring dockerfile: 1.55kB                                     0.0s
+    17→ => [frontend-admin] resolve image config for docker-image://docker.io/do  1.2s
+    18→ => CACHED [frontend-admin] docker-image://docker.io/docker/dockerfile:1.  0.0s
+    19→ => [frontend-user internal] load metadata for docker.io/library/node:20-  0.0s
+    20→ => [frontend-admin internal] load .dockerignore                           0.0s
+    21→ => => transferring context: 158B                                          0.0s
+    22→ => [frontend-user internal] load .dockerignore                            0.1s
+    23→ => => transferring context: 158B                                          0.0s
+    24→ => [frontend-user internal] load build context                            0.1s
+    25→ => => transferring context: 2.75kB                                        0.0s
+    26→ => [frontend-admin runtime 1/6] FROM docker.io/library/node:20-alpine     0.0s
+    27→ => CACHED [frontend-admin builder 2/7] WORKDIR /build                     0.0s
+    28→ => CACHED [frontend-admin runtime 2/6] WORKDIR /app                       0.0s
+    29→ => [frontend-admin internal] load build context                           0.1s
+    30→ => => transferring context: 2.20kB                                        0.0s
+    31→ => [frontend-user runtime 3/6] COPY package.json package-lock.json* ./    0.2s
+    32→ => [frontend-user builder 3/7] COPY package.json package-lock.json* ./    0.2s
+    33→ => [frontend-admin builder 3/7] COPY package.json package-lock.json* ./   0.2s
+    34→ => [frontend-admin runtime 3/6] COPY package.json package-lock.json* ./   0.1s
+    35→ => [frontend-user builder 4/7] RUN npm install --no-audit --no-fund --i  65.7s
+    36→ => [frontend-user runtime 4/6] RUN npm install --omit=dev --no-audit --  50.6s
+    37→ => [frontend-admin runtime 4/6] RUN npm install --omit=dev --no-audit -  49.6s
+    38→ => [frontend-admin builder 4/7] RUN npm install --no-audit --no-fund --  67.3s
+    39→ => [frontend-user builder 5/7] COPY . .                                   0.2s
+    40→ => [frontend-user builder 6/7] RUN npx svelte-kit sync                    6.3s
+    41→ => [frontend-admin builder 5/7] COPY . .                                  0.1s
+    42→ => [frontend-admin builder 6/7] RUN npx svelte-kit sync                   5.5s
+    43→ => ERROR [frontend-user builder 7/7] RUN npm run build                   14.7s
+    44→ => ERROR [frontend-admin builder 7/7] RUN npm run build                  14.2s
+    45→------
+    46→ > [frontend-user builder 7/7] RUN npm run build:
+    47→0.703 
+    48→0.703 > egp-exchange-user@0.1.0 build
+    49→0.703 > svelte-kit sync && vite build
+    50→0.703 
+    51→8.011 vite v5.4.21 building SSR bundle for production...
+    52→8.132 transforming...
+    53→10.72 9:19:25 AM [vite-plugin-svelte] /build/src/routes/p2p/create/+page.svelte:76:12 A11y: A form label must be associated with a control.
+    54→10.72 74:         <!-- الجهة -->
+    55→10.72 75:         <div>
+    56→10.72 76:             <label class="label">الجهة</label>
+    57→10.72                 ^
+    58→10.72 77:             <div class="grid grid-cols-2 gap-2">
+    59→10.72 78:                 <button class="btn {side === 'buy' ? 'bg-accent-green text-base-900 hover:bg-emerald-500' : 'bg-base-700 text-text-secondary hover:bg-base-600'}" on:click={() => (side = 'buy')}>
+    60→10.72 9:19:25 AM [vite-plugin-svelte] /build/src/routes/p2p/create/+page.svelte:142:12 A11y: A form label must be associated with a control.
+    61→10.72 140:         <!-- طرق الدفع -->
+    62→10.72 141:         <div>
+    63→10.72 142:             <label class="label">طرق الدفع المقبولة</label>
+    64→10.72                  ^
+    65→10.72 143:             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    66→10.72 144:                 {#each paymentMethods as pm}
+    67→11.47 9:19:26 AM [vite-plugin-svelte] /build/src/routes/futures/[pair]/+page.svelte:221:24 A11y: A form label must be associated with a control.
+    68→11.47 219:                 <div class="mb-3">
+    69→11.47 220:                     <div class="flex items-center justify-between mb-1">
+    70→11.47 221:                         <label class="label mb-0">الرافعة المالية</label>
+    71→11.47                              ^
+    72→11.47 222:                         <span class="text-sm font-mono font-bold text-accent-blue">{leverage}x</span>
+    73→11.47 223:                     </div>
+    74→12.80 9:19:27 AM [vite-plugin-svelte] /build/src/lib/components/NotificationStack.svelte:36:8 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+    75→12.80 34: <div class="fixed bottom-4 left-4 z-50 space-y-2 max-w-sm">
+    76→12.80 35:     {#each $notifications as n (n.id)}
+    77→12.80 36:         <div
+    78→12.80             ^
+    79→12.80 37:             in:fly={{ y: 20, duration: 200 }}
+    80→12.80 38:             out:fly={{ y: 20, duration: 150 }}
+    81→12.80 9:19:27 AM [vite-plugin-svelte] /build/src/lib/components/NotificationStack.svelte:36:8 A11y: <div> with click handler must have an ARIA role
+    82→12.80 34: <div class="fixed bottom-4 left-4 z-50 space-y-2 max-w-sm">
+    83→12.80 35:     {#each $notifications as n (n.id)}
+    84→12.80 36:         <div
+    85→12.80             ^
+    86→12.80 37:             in:fly={{ y: 20, duration: 200 }}
+    87→12.80 38:             out:fly={{ y: 20, duration: 150 }}
+    88→14.25 [plugin:vite:esbuild] [plugin vite:esbuild] src/lib/i18n/ar.ts: Duplicate key "filled" in object literal
+    89→14.25 135|      open: 'مفتوح',
+    90→14.25 136|      partially_filled: 'منفذ جزئياً',
+    91→14.25 137|      filled: 'منفذ بالكامل',
+    92→14.25    |      ^
+    93→14.25 138|      cancelled: 'ملغى',
+    94→14.25 139|      rejected_order: 'مرفوض',
+    95→14.25 
+    96→14.42 node_modules/@sveltejs/kit/src/runtime/client/client.js (6:23): "untrack" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+    97→14.43 node_modules/@sveltejs/kit/src/runtime/client/client.js (389:26): "fork" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+    98→14.44 node_modules/@sveltejs/kit/src/runtime/client/client.js (1310:30): "settled" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+    99→14.48 ✓ 134 modules transformed.
+   100→14.50 x Build failed in 6.45s
+   101→14.50 error during build:
+   102→14.50 src/routes/+layout.svelte (4:13): "navigate" is not exported by "node_modules/@sveltejs/kit/src/runtime/app/navigation.js", imported by "src/routes/+layout.svelte".
+   103→14.50 file: /build/src/routes/+layout.svelte:4:13
+   104→14.50 
+   105→14.50 2:     import { onMount, onDestroy } from 'svelte';
+   106→14.50 3:     import { page } from '$app/stores';
+   107→14.50 4:     import { navigate } from '$app/navigation';
+   108→14.50                 ^
+   109→14.50 5:     import { user, isAuthenticated, connectMarketWs, disconnectMarketWs, clearSession, circuitOpen, notifications } f...
+   110→14.50 6:     import { _t, lang, setLang } from '$lib/i18n';
+   111→14.50 
+   112→14.50     at getRollupError (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:317:41)
+   113→14.50     at error (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:313:42)
+   114→14.50     at Module.error (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17396:16)
+   115→14.50     at Module.traceVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17829:29)
+   116→14.50     at ModuleScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:15419:39)
+   117→14.50     at ReturnValueScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   118→14.50     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   119→14.50     at FunctionScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   120→14.50     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   121→14.50     at Identifier.bind (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5451:40)
+   122→------
+   123→------
+   124→ > [frontend-admin builder 7/7] RUN npm run build:
+   125→0.892 
+   126→0.892 > egp-exchange-admin@0.1.0 build
+   127→0.892 > svelte-kit sync && vite build
+   128→0.892 
+   129→8.756 vite v5.4.21 building SSR bundle for production...
+   130→8.816 transforming...
+   131→10.67 9:19:26 AM [vite-plugin-svelte] /build/src/routes/withdrawals/+page.svelte:136:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   132→10.67 134: 
+   133→10.67 135: {#if selected}
+   134→10.67 136:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   135→10.67          ^
+   136→10.67 137:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   137→10.67 138:             <div class="flex items-center justify-between mb-4">
+   138→10.67 9:19:26 AM [vite-plugin-svelte] /build/src/routes/withdrawals/+page.svelte:136:4 A11y: <div> with click handler must have an ARIA role
+   139→10.67 134: 
+   140→10.67 135: {#if selected}
+   141→10.67 136:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   142→10.67          ^
+   143→10.67 137:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   144→10.67 138:             <div class="flex items-center justify-between mb-4">
+   145→11.29 9:19:26 AM [vite-plugin-svelte] /build/src/routes/+layout.svelte:73:8 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   146→11.29 71: 
+   147→11.29 72:     {#if sidebarOpen}
+   148→11.29 73:         <div class="fixed inset-0 bg-base-900/70 z-30 lg:hidden" on:click={() => (sidebarOpen = false)}></div>
+   149→11.29             ^
+   150→11.29 74:     {/if}
+   151→11.29 75: 
+   152→11.29 9:19:26 AM [vite-plugin-svelte] /build/src/routes/+layout.svelte:73:8 A11y: <div> with click handler must have an ARIA role
+   153→11.29 71: 
+   154→11.29 72:     {#if sidebarOpen}
+   155→11.29 73:         <div class="fixed inset-0 bg-base-900/70 z-30 lg:hidden" on:click={() => (sidebarOpen = false)}></div>
+   156→11.29             ^
+   157→11.29 74:     {/if}
+   158→11.29 75: 
+   159→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:200:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   160→11.30 198: 
+   161→11.30 199: {#if selected}
+   162→11.30 200:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   163→11.30          ^
+   164→11.30 201:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   165→11.30 202:             <div class="flex items-center justify-between mb-4">
+   166→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:200:4 A11y: <div> with click handler must have an ARIA role
+   167→11.30 198: 
+   168→11.30 199: {#if selected}
+   169→11.30 200:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   170→11.30          ^
+   171→11.30 201:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   172→11.30 202:             <div class="flex items-center justify-between mb-4">
+   173→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:248:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   174→11.30 246: <!-- نافذة المحافظ وتعديل الأرصدة -->
+   175→11.30 247: {#if selected && showWallet}
+   176→11.30 248:     <div class="fixed inset-0 z-[60] bg-base-900/80 flex items-center justify-center p-4" on:click|self={() => (showWallet = false)}>
+   177→11.30          ^
+   178→11.30 249:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   179→11.30 250:             <div class="flex items-center justify-between mb-4">
+   180→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:248:4 A11y: <div> with click handler must have an ARIA role
+   181→11.30 246: <!-- نافذة المحافظ وتعديل الأرصدة -->
+   182→11.30 247: {#if selected && showWallet}
+   183→11.30 248:     <div class="fixed inset-0 z-[60] bg-base-900/80 flex items-center justify-center p-4" on:click|self={() => (showWallet = false)}>
+   184→11.30          ^
+   185→11.30 249:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   186→11.30 250:             <div class="flex items-center justify-between mb-4">
+   187→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/currencies/+page.svelte:203:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   188→11.30 201: <!-- النموذج -->
+   189→11.30 202: {#if showForm}
+   190→11.30 203:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   191→11.30          ^
+   192→11.30 204:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   193→11.30 205:             <div class="flex items-center justify-between mb-4">
+   194→11.30 9:19:26 AM [vite-plugin-svelte] /build/src/routes/currencies/+page.svelte:203:4 A11y: <div> with click handler must have an ARIA role
+   195→11.30 201: <!-- النموذج -->
+   196→11.30 202: {#if showForm}
+   197→11.30 203:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   198→11.30          ^
+   199→11.30 204:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   200→11.30 205:             <div class="flex items-center justify-between mb-4">
+   201→11.64 9:19:27 AM [vite-plugin-svelte] /build/src/routes/pairs/+page.svelte:208:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   202→11.64 206: 
+   203→11.64 207: {#if showForm}
+   204→11.64 208:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   205→11.64          ^
+   206→11.64 209:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   207→11.64 210:             <div class="flex items-center justify-between mb-4">
+   208→11.64 9:19:27 AM [vite-plugin-svelte] /build/src/routes/pairs/+page.svelte:208:4 A11y: <div> with click handler must have an ARIA role
+   209→11.64 206: 
+   210→11.64 207: {#if showForm}
+   211→11.64 208:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   212→11.64          ^
+   213→11.64 209:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   214→11.64 210:             <div class="flex items-center justify-between mb-4">
+   215→11.64 9:19:27 AM [vite-plugin-svelte] /build/src/routes/deposits/+page.svelte:127:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   216→11.64 125: 
+   217→11.64 126: {#if selected}
+   218→11.64 127:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   219→11.64          ^
+   220→11.64 128:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   221→11.64 129:             <div class="flex items-center justify-between mb-4">
+   222→11.64 9:19:27 AM [vite-plugin-svelte] /build/src/routes/deposits/+page.svelte:127:4 A11y: <div> with click handler must have an ARIA role
+   223→11.64 125: 
+   224→11.64 126: {#if selected}
+   225→11.64 127:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   226→11.64          ^
+   227→11.64 128:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   228→11.64 129:             <div class="flex items-center justify-between mb-4">
+   229→13.85 node_modules/@sveltejs/kit/src/runtime/client/client.js (6:23): "untrack" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   230→13.85 node_modules/@sveltejs/kit/src/runtime/client/client.js (389:26): "fork" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   231→13.90 node_modules/@sveltejs/kit/src/runtime/client/client.js (1310:30): "settled" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   232→13.95 ✓ 126 modules transformed.
+   233→13.96 x Build failed in 5.21s
+   234→13.96 error during build:
+   235→13.96 src/routes/+layout.svelte (4:13): "navigate" is not exported by "node_modules/@sveltejs/kit/src/runtime/app/navigation.js", imported by "src/routes/+layout.svelte".
+   236→13.96 file: /build/src/routes/+layout.svelte:4:13
+   237→13.96 
+   238→13.96 2:     import { onMount, onDestroy } from 'svelte';
+   239→13.96 3:     import { page } from '$app/stores';
+   240→13.96 4:     import { navigate } from '$app/navigation';
+   241→13.96                 ^
+   242→13.96 5:     import { adminUser, isAdminAuthenticated, clearAdminSession } from '$lib/stores';
+   243→13.96 
+   244→13.96     at getRollupError (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:317:41)
+   245→13.96     at error (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:313:42)
+   246→13.96     at Module.error (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17396:16)
+   247→13.96     at Module.traceVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17829:29)
+   248→13.96     at ModuleScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:15419:39)
+   249→13.96     at ReturnValueScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   250→13.96     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   251→13.96     at ReturnValueScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   252→13.96     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   253→13.96     at TrackingScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   254→------
+   255→[+] build 0/2
+   256→ ⠙ Image egp-crypto-exchange-frontend-user  Building                       89.6s
+   257→ ⠙ Image egp-crypto-exchange-frontend-admin Building                       89.6s
+   258→target frontend-user: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+   259→
+   260→[+] Building 30.5s (35/50)                                                      
+   261→ => [internal] load local bake definitions                                 0.0s
+   262→ => => reading from stdin 1.60kB                                           0.0s
+   263→ => [frontend-user internal] load build definition from Dockerfile         0.1s
+   264→ => => transferring dockerfile: 1.55kB                                     0.0s
+   265→ => [frontend-admin internal] load build definition from Dockerfile        0.1s
+   266→ => => transferring dockerfile: 1.31kB                                     0.0s
+   267→ => [backend internal] load build definition from Dockerfile               0.0s
+   268→ => => transferring dockerfile: 2.11kB                                     0.0s
+   269→ => [frontend-admin] resolve image config for docker-image://docker.io/do  0.7s
+   270→ => CACHED [backend] docker-image://docker.io/docker/dockerfile:1.6@sha25  0.0s
+   271→ => [backend internal] load metadata for docker.io/library/rust:1.78-slim  3.1s
+   272→ => [frontend-admin internal] load metadata for docker.io/library/node:20  0.0s
+   273→ => [backend internal] load metadata for gcr.io/distroless/cc-debian12:no  0.7s
+   274→ => [frontend-user internal] load .dockerignore                            0.0s
+   275→ => => transferring context: 158B                                          0.0s
+   276→ => [frontend-admin internal] load .dockerignore                           0.0s
+   277→ => => transferring context: 158B                                          0.0s
+   278→ => [frontend-admin builder 1/7] FROM docker.io/library/node:20-alpine     0.0s
+   279→ => [frontend-admin internal] load build context                           0.0s
+   280→ => => transferring context: 2.20kB                                        0.0s
+   281→ => [frontend-user internal] load build context                            0.1s
+   282→ => => transferring context: 2.75kB                                        0.0s
+   283→ => CACHED [frontend-user runtime 2/6] WORKDIR /app                        0.0s
+   284→ => CACHED [frontend-admin runtime 3/6] COPY package.json package-lock.js  0.0s
+   285→ => CACHED [frontend-admin runtime 4/6] RUN npm install --omit=dev --no-a  0.0s
+   286→ => CACHED [frontend-user builder 2/7] WORKDIR /build                      0.0s
+   287→ => CACHED [frontend-admin builder 3/7] COPY package.json package-lock.js  0.0s
+   288→ => CACHED [frontend-admin builder 4/7] RUN npm install --no-audit --no-f  0.0s
+   289→ => CACHED [frontend-admin builder 5/7] COPY . .                           0.0s
+   290→ => CACHED [frontend-admin builder 6/7] RUN npx svelte-kit sync            0.0s
+   291→ => CACHED [frontend-user runtime 3/6] COPY package.json package-lock.jso  0.0s
+   292→ => CACHED [frontend-user runtime 4/6] RUN npm install --omit=dev --no-au  0.0s
+   293→ => ERROR [frontend-admin builder 7/7] RUN npm run build                  28.1s
+   294→ => CACHED [frontend-user builder 3/7] COPY package.json package-lock.jso  0.0s
+   295→ => CACHED [frontend-user builder 4/7] RUN npm install --no-audit --no-fu  0.0s
+   296→ => CACHED [frontend-user builder 5/7] COPY . .                            0.0s
+   297→ => CACHED [frontend-user builder 6/7] RUN npx svelte-kit sync             0.0s
+   298→ => CANCELED [frontend-user builder 7/7] RUN npm run build                28.8s
+   299→ => [backend internal] load .dockerignore                                  0.0s
+   300→ => => transferring context: 111B                                          0.0s
+   301→ => CANCELED [backend builder  1/10] FROM docker.io/library/rust:1.78-sl  25.2s
+   302→ => => resolve docker.io/library/rust:1.78-slim-bookworm@sha256:0fea96762  0.1s
+   303→ => => sha256:09f376ebb190216b0459f470e71bec7b5dfa611d 29.15MB / 29.15MB  19.3s
+   304→ => => sha256:3f58ef35d8f3b40cce7d7d16a69543dcd623c69 28.31MB / 248.17MB  25.7s
+   305→ => => sha256:0fea967628dc796a2b9d1d57ddb3af3b3f0a35b6c8c 7.80kB / 7.80kB  0.0s
+   306→ => => sha256:4cc0621fb3e97a50d853803af66b72fa4a1d54c5555 1.37kB / 1.37kB  0.0s
+   307→ => => sha256:de5136cebf526224ae59da8937f768791c7af495a45 3.06kB / 3.06kB  0.0s
+   308→ => => extracting sha256:09f376ebb190216b0459f470e71bec7b5dfa611d66bf0084  6.1s
+   309→ => [backend runtime 1/4] FROM gcr.io/distroless/cc-debian12:nonroot@sha2  0.0s
+   310→ => [backend internal] load build context                                  0.1s
+   311→ => => transferring context: 1.58kB                                        0.0s
+   312→ => CACHED [backend runtime 2/4] WORKDIR /app                              0.0s
+   313→------
+   314→ > [frontend-admin builder 7/7] RUN npm run build:
+   315→0.937 
+   316→0.937 > egp-exchange-admin@0.1.0 build
+   317→0.937 > svelte-kit sync && vite build
+   318→0.937 
+   319→14.61 vite v5.4.21 building SSR bundle for production...
+   320→14.72 transforming...
+   321→18.95 9:19:51 AM [vite-plugin-svelte] /build/src/routes/withdrawals/+page.svelte:136:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   322→18.95 134: 
+   323→18.95 135: {#if selected}
+   324→18.95 136:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   325→18.95          ^
+   326→18.95 137:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   327→18.95 138:             <div class="flex items-center justify-between mb-4">
+   328→18.95 9:19:51 AM [vite-plugin-svelte] /build/src/routes/withdrawals/+page.svelte:136:4 A11y: <div> with click handler must have an ARIA role
+   329→18.95 134: 
+   330→18.95 135: {#if selected}
+   331→18.95 136:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   332→18.95          ^
+   333→18.95 137:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   334→18.95 138:             <div class="flex items-center justify-between mb-4">
+   335→19.89 9:19:52 AM [vite-plugin-svelte] /build/src/routes/+layout.svelte:73:8 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   336→19.89 71: 
+   337→19.89 72:     {#if sidebarOpen}
+   338→19.89 73:         <div class="fixed inset-0 bg-base-900/70 z-30 lg:hidden" on:click={() => (sidebarOpen = false)}></div>
+   339→19.89             ^
+   340→19.89 74:     {/if}
+   341→19.89 75: 
+   342→19.89 9:19:52 AM [vite-plugin-svelte] /build/src/routes/+layout.svelte:73:8 A11y: <div> with click handler must have an ARIA role
+   343→19.89 71: 
+   344→19.89 72:     {#if sidebarOpen}
+   345→19.89 73:         <div class="fixed inset-0 bg-base-900/70 z-30 lg:hidden" on:click={() => (sidebarOpen = false)}></div>
+   346→19.89             ^
+   347→19.89 74:     {/if}
+   348→19.89 75: 
+   349→19.89 9:19:52 AM [vite-plugin-svelte] /build/src/routes/currencies/+page.svelte:203:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   350→19.89 201: <!-- النموذج -->
+   351→19.89 202: {#if showForm}
+   352→19.89 203:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   353→19.89          ^
+   354→19.89 204:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   355→19.89 205:             <div class="flex items-center justify-between mb-4">
+   356→19.89 9:19:52 AM [vite-plugin-svelte] /build/src/routes/currencies/+page.svelte:203:4 A11y: <div> with click handler must have an ARIA role
+   357→19.89 201: <!-- النموذج -->
+   358→19.89 202: {#if showForm}
+   359→19.89 203:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   360→19.89          ^
+   361→19.89 204:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   362→19.89 205:             <div class="flex items-center justify-between mb-4">
+   363→20.80 9:19:53 AM [vite-plugin-svelte] /build/src/routes/pairs/+page.svelte:208:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   364→20.80 206: 
+   365→20.80 207: {#if showForm}
+   366→20.80 208:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   367→20.80          ^
+   368→20.80 209:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   369→20.80 210:             <div class="flex items-center justify-between mb-4">
+   370→20.80 9:19:53 AM [vite-plugin-svelte] /build/src/routes/pairs/+page.svelte:208:4 A11y: <div> with click handler must have an ARIA role
+   371→20.80 206: 
+   372→20.80 207: {#if showForm}
+   373→20.80 208:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (showForm = false)}>
+   374→20.80          ^
+   375→20.80 209:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   376→20.80 210:             <div class="flex items-center justify-between mb-4">
+   377→20.80 9:19:53 AM [vite-plugin-svelte] /build/src/routes/deposits/+page.svelte:127:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   378→20.80 125: 
+   379→20.80 126: {#if selected}
+   380→20.80 127:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   381→20.80          ^
+   382→20.80 128:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   383→20.80 129:             <div class="flex items-center justify-between mb-4">
+   384→20.80 9:19:53 AM [vite-plugin-svelte] /build/src/routes/deposits/+page.svelte:127:4 A11y: <div> with click handler must have an ARIA role
+   385→20.80 125: 
+   386→20.80 126: {#if selected}
+   387→20.80 127:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   388→20.80          ^
+   389→20.80 128:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6">
+   390→20.80 129:             <div class="flex items-center justify-between mb-4">
+   391→21.15 9:19:53 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:200:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   392→21.15 198: 
+   393→21.15 199: {#if selected}
+   394→21.15 200:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   395→21.15          ^
+   396→21.15 201:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   397→21.15 202:             <div class="flex items-center justify-between mb-4">
+   398→21.15 9:19:53 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:200:4 A11y: <div> with click handler must have an ARIA role
+   399→21.15 198: 
+   400→21.15 199: {#if selected}
+   401→21.15 200:     <div class="fixed inset-0 z-50 bg-base-900/70 flex items-center justify-center p-4" on:click|self={() => (selected = null)}>
+   402→21.15          ^
+   403→21.15 201:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+   404→21.15 202:             <div class="flex items-center justify-between mb-4">
+   405→21.15 9:19:53 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:248:4 A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details.
+   406→21.15 246: <!-- نافذة المحافظ وتعديل الأرصدة -->
+   407→21.15 247: {#if selected && showWallet}
+   408→21.15 248:     <div class="fixed inset-0 z-[60] bg-base-900/80 flex items-center justify-center p-4" on:click|self={() => (showWallet = false)}>
+   409→21.15          ^
+   410→21.15 249:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   411→21.15 250:             <div class="flex items-center justify-between mb-4">
+   412→21.15 9:19:53 AM [vite-plugin-svelte] /build/src/routes/users/+page.svelte:248:4 A11y: <div> with click handler must have an ARIA role
+   413→21.15 246: <!-- نافذة المحافظ وتعديل الأرصدة -->
+   414→21.15 247: {#if selected && showWallet}
+   415→21.15 248:     <div class="fixed inset-0 z-[60] bg-base-900/80 flex items-center justify-center p-4" on:click|self={() => (showWallet = false)}>
+   416→21.15          ^
+   417→21.15 249:         <div class="bg-base-800 border border-base-600 rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+   418→21.15 250:             <div class="flex items-center justify-between mb-4">
+   419→26.99 node_modules/@sveltejs/kit/src/runtime/client/client.js (6:23): "untrack" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   420→27.02 node_modules/@sveltejs/kit/src/runtime/client/client.js (389:26): "fork" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   421→27.07 node_modules/@sveltejs/kit/src/runtime/client/client.js (1310:30): "settled" is not exported by "node_modules/svelte/src/runtime/ssr.js", imported by "node_modules/@sveltejs/kit/src/runtime/client/client.js".
+   422→27.14 ✓ 126 modules transformed.
+   423→27.15 x Build failed in 12.54s
+   424→27.15 error during build:
+   425→27.15 src/routes/+layout.svelte (4:13): "navigate" is not exported by "node_modules/@sveltejs/kit/src/runtime/app/navigation.js", imported by "src/routes/+layout.svelte".
+   426→27.15 file: /build/src/routes/+layout.svelte:4:13
+   427→27.15 
+   428→27.15 2:     import { onMount, onDestroy } from 'svelte';
+   429→27.15 3:     import { page } from '$app/stores';
+   430→27.15 4:     import { navigate } from '$app/navigation';
+   431→27.15                 ^
+   432→27.15 5:     import { adminUser, isAdminAuthenticated, clearAdminSession } from '$lib/stores';
+   433→27.15 
+   434→27.15     at getRollupError (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:317:41)
+   435→27.15     at error (file:///build/node_modules/rollup/dist/es/shared/parseAst.js:313:42)
+   436→27.15     at Module.error (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17396:16)
+   437→27.15     at Module.traceVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:17829:29)
+   438→27.15     at ModuleScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:15419:39)
+   439→27.15     at ReturnValueScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   440→27.15     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   441→27.15     at ReturnValueScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   442→27.15     at FunctionBodyScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   443→27.15     at TrackingScope.findVariable (file:///build/node_modules/rollup/dist/es/shared/node-entry.js:5684:38)
+   444→------
+   445→[+] up 0/3
+   446→ ⠙ Image egp-crypto-exchange-frontend-admin Building                       30.6s
+   447→ ⠙ Image egp-crypto-exchange-backend        Building                       30.6s
+   448→ ⠙ Image egp-crypto-exchange-frontend-user  Building                       30.6s
+   449→target frontend-admin: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+   450→
+   451→air@air-Rev-1-0:~/amir/egp-crypto-exchange$ 
+   452→
+   453→

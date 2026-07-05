@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { p2p } from '$lib/api';
     import { p2pMessages, p2pTradeUpdates, user, pushNotification } from '$lib/stores';
     import { fmtEgp, fmtQty, fmtDate, fmtRelative } from '$lib/format';

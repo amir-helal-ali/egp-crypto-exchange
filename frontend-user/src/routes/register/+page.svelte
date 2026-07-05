@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { auth } from '$lib/api';
     import { setSession } from '$lib/stores';
 
@@ -24,7 +24,7 @@
             if (typeof localStorage !== 'undefined') {
                 localStorage.setItem('refresh_token', res.refresh_token);
             }
-            await navigate('/', { replace: true });
+            await goto('/', { replace: true });
         } catch (e: any) {
             error = e.message || 'فشل التسجيل';
         } finally {

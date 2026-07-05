@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { adminUser, isAdminAuthenticated, clearAdminSession } from '$lib/stores';
 
     let sidebarOpen = false;
@@ -24,13 +24,13 @@
 
     onMount(() => {
         if (!$isAdminAuthenticated && $page.url.pathname !== '/login') {
-            navigate('/login', { replace: true });
+            goto('/login', { replace: true });
         }
     });
 
     async function logout() {
         clearAdminSession();
-        await navigate('/login', { replace: true });
+        await goto('/login', { replace: true });
     }
 
     $: path = $page.url.pathname;

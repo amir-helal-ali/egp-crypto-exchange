@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { navigate } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { auth } from '$lib/api';
     import { setAdminSession, isAdminAuthenticated } from '$lib/stores';
 
@@ -10,7 +10,7 @@
     let loading = false;
 
     onMount(() => {
-        if ($isAdminAuthenticated) navigate('/', { replace: true });
+        if ($isAdminAuthenticated) goto('/', { replace: true });
     });
 
     async function submit(e: Event) {
@@ -26,7 +26,7 @@
             if (typeof localStorage !== 'undefined') {
                 localStorage.setItem('admin_refresh_token', res.refresh_token);
             }
-            await navigate('/', { replace: true });
+            await goto('/', { replace: true });
         } catch (e: any) {
             error = e.message || 'فشل تسجيل الدخول';
         } finally {
