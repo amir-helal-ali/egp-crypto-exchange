@@ -262,7 +262,7 @@ pub async fn cancel_order(
         return Err(AppError::Forbidden("not your order".into()));
     }
     if order.status != OrderStatus::Open && order.status != OrderStatus::PartiallyFilled {
-        return Err(AppError::BadRequest(format!("order is {}", order.status)));
+        return Err(AppError::BadRequest(format!("order is {:?}", order.status)));
     }
 
     let cancelled = state.engine.cancel(&order.pair, order_id);

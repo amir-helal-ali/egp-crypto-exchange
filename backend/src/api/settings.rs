@@ -63,6 +63,11 @@ pub async fn update_currency(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateCurrencyRequest>,
 ) -> AppResult<Json<Currency>> {
+    let network_arg: Option<Option<&str>> = if let Some(ref n) = req.network {
+        Some(Some(n.as_str()))
+    } else {
+        None
+    };
     let row = db::currencies::update_currency(
         &state.db,
         id,
@@ -70,7 +75,7 @@ pub async fn update_currency(
         req.precision,
         req.withdraw_fee,
         req.min_withdrawal,
-        req.network.as_deref().map(Some).flatten().map(|s| Some(s)).unwrap_or(None),
+        network_arg,
         req.is_active,
     )
     .await?;

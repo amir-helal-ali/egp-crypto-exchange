@@ -81,7 +81,7 @@ impl RedisQueue {
     ) -> AppResult<Vec<(Uuid, Uuid)>> {
         let mut conn = self.conn.clone();
         let list_key = self.key_pending_list(tx_type, asset_class);
-        let raw: Vec<String> = conn.lrange(&list_key, 0, limit.saturating_sub(1)).await?;
+        let raw: Vec<String> = conn.lrange(&list_key, 0, limit.saturating_sub(1) as isize).await?;
         let mut out = Vec::with_capacity(raw.len());
         for r in raw {
             if let Ok((id, uid)) = serde_json::from_str::<(Uuid, Uuid)>(&r) {
@@ -102,7 +102,7 @@ impl RedisQueue {
         let list_key = self.key_pending_list(tx_type, asset_class);
         let raw: Vec<String> = conn.lrange(&list_key, 0, -1).await?;
         for (i, r) in raw.iter().enumerate() {
-            if let Ok((id, _)) = serde_json::from_str::<(Uuid, Uuid)>(r) {
+            if let Ok((id, _)) = serde_json::from_str::<(Uuid, Uuid)>(r.as_str()) {
                 if id == manual_tx_id {
                     return Ok(i as u32 + 1);
                 }
@@ -123,9 +123,9 @@ impl RedisQueue {
         // Need to find the payload to remove. We rebuild it by scanning.
         let raw: Vec<String> = conn.lrange(&list_key, 0, -1).await?;
         for r in raw {
-            if let Ok((id, _)) = serde_json::from_str::<(Uuid, Uuid)>(r) {
+            if let Ok((id, _)) = serde_json::from_str::<(Uuid, Uuid)>(&r) {
                 if id == manual_tx_id {
-                    let _: () = conn.lrem(&list_key, 1, r).await?;
+                    let _: () = conn.lrem(&list_key, 1, &r).await?;
                     break;
                 }
             }

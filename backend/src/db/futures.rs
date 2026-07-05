@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::AppResult;
-use crate::models::{FuturesPosition, MarginMode, PositionSide, PositionStatus};
+use crate::models::{FuturesPosition, MarginMode, PositionSide};
 
 pub async fn open(
     pool: &PgPool,

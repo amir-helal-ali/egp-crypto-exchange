@@ -46,7 +46,7 @@ pub async fn find_by_id(pool: &PgPool, id: Uuid) -> AppResult<User> {
         .bind(id)
         .fetch_optional(pool)
         .await?
-        .ok_or_else(|| not_found(format!("user {id}")).unwrap_err())?;
+        .ok_or_else(|| AppError::NotFound(format!("user {id}")))?;
     Ok(user)
 }
 

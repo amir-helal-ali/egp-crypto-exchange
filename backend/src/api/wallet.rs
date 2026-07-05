@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use rust_decimal::Decimal;
@@ -175,18 +175,11 @@ pub async fn withdrawal_status_ws(
 pub async fn ledger(
     auth: AuthUser,
     State(state): State<Arc<AppState>>,
-    Path(asset): Option<Path<String>>,
 ) -> AppResult<Json<Value>> {
-    let asset_filter = asset;
     let wallets = db::wallets::list_for_user(&state.db, auth.user_id).await?;
 
     let mut entries = Vec::new();
     for w in &wallets {
-        if let Some(ref a) = asset_filter {
-            if &w.asset_symbol != a {
-                continue;
-            }
-        }
         let rows: Vec<crate::models::WalletLedgerEntry> = sqlx::query_as::<_, crate::models::WalletLedgerEntry>(
             r#"SELECT * FROM wallet_ledger
                WHERE wallet_id = $1

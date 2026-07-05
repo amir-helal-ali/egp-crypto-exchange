@@ -1,5 +1,7 @@
 //! Service-layer helpers: trade pair metadata, fee schedule.
 
+use std::sync::Arc;
+
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
 use serde::Deserialize;

@@ -209,7 +209,6 @@ pub async fn list_positions(
 
 /// مهمة خلفية: تحديث أسعار السوق للمراكز المفتوحة + فحص التصفية
 pub async fn mark_price_updater(state: Arc<AppState>) {
-    use std::collections::HashMap;
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
     loop {
         interval.tick().await;

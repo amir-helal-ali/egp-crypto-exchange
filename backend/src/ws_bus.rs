@@ -6,7 +6,6 @@
 //! calls `WsBus::emit_to_user(user_id, msg)` and all of that user's open
 //! WebSocket connections receive it instantly — no polling required.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -42,7 +41,7 @@ impl WsBus {
     }
 
     /// إلغاء تسجيل اتصال (عند إغلاق WS).
-    pub fn unregister(&self, user_id: uuid::Uuid, target_rx: &mpsc::UnboundedReceiver<Value>) {
+    pub fn unregister(&self, user_id: uuid::Uuid, _target_rx: &mpsc::UnboundedReceiver<Value>) {
         // بطريقة بسيطة: نحذف أي senders مغلقة
         if let Some(mut senders) = self.senders.get_mut(&user_id) {
             senders.retain(|s| !s.is_closed());

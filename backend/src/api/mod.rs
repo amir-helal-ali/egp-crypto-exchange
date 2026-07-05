@@ -12,6 +12,7 @@ pub mod settings;
 
 use std::sync::Arc;
 
+use axum::extract::State;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
@@ -146,6 +147,7 @@ async fn health() -> &'static str {
 async fn health_ready(state: axum::extract::State<Arc<AppState>>) -> &'static str {
     // Verify DB and Redis are reachable.
     let _ = sqlx::query("SELECT 1").execute(&state.db).await;
-    let _ = redis::cmd("PING").query_async::<String>(&mut state.queue.conn.clone()).await;
+    let mut conn = state.queue.conn.clone();
+    let _: Result<String, _> = redis::cmd("PING").query_async(&mut conn).await;
     "READY"
 }

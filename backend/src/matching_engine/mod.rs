@@ -221,58 +221,93 @@ impl Engine {
         let book = self.ensure_book(&pair);
         let mut trades: Vec<MatchTrade> = Vec::new();
         let mut remaining = order.remaining;
-        let taker_side = order.side;
         let taker_order_id = order.id;
         let taker_user_id = order.user_id;
 
-        let (taker_side_enum, opp_book) = match order.side {
-            OrderSide::Buy => (TradeSide::Buy, &book.asks),
-            OrderSide::Sell => (TradeSide::Sell, &book.bids),
+        // Match against the opposite side. We handle buy/sell separately because
+        // `BookSide<true>` (asks) and `BookSide<false>` (bids) are distinct types
+        // at compile time (const generic).
+        let taker_side_enum = match order.side {
+            OrderSide::Buy => TradeSide::Buy,
+            OrderSide::Sell => TradeSide::Sell,
         };
 
-        let mut opp = opp_book.write();
+        let order_type = order.order_type;
+        let taker_price = order.price;
+        let order_id_local = taker_order_id;
+        let user_id_local = taker_user_id;
+        let pair_local = pair.clone();
 
-        while remaining > Decimal::ZERO {
-            let best = match opp.peek_best() {
-                Some(o) => o.clone(),
-                None => break,
-            };
-
-            // Price check: a buy taker only matches asks <= its price (limit).
-            // A sell taker only matches bids >= its price (limit).
-            let price_ok = match order.order_type {
-                OrderType::Market => true,
-                OrderType::Limit => match order.side {
-                    OrderSide::Buy => best.price <= order.price,
-                    OrderSide::Sell => best.price >= order.price,
-                },
-            };
-            if !price_ok {
-                break;
+        match order.side {
+            OrderSide::Buy => {
+                let mut opp = book.asks.write();
+                while remaining > Decimal::ZERO {
+                    let best = match opp.peek_best() {
+                        Some(o) => o.clone(),
+                        None => break,
+                    };
+                    let price_ok = match order_type {
+                        OrderType::Market => true,
+                        OrderType::Limit => best.price <= taker_price,
+                    };
+                    if !price_ok {
+                        break;
+                    }
+                    let trade_qty = remaining.min(best.remaining);
+                    let trade_price = best.price;
+                    trades.push(MatchTrade {
+                        pair: pair_local.clone(),
+                        taker_order_id: order_id_local,
+                        maker_order_id: best.id,
+                        taker_user_id: user_id_local,
+                        maker_user_id: best.user_id,
+                        taker_side: taker_side_enum,
+                        price: trade_price,
+                        quantity: trade_qty,
+                        executed_at: chrono::Utc::now(),
+                    });
+                    remaining -= trade_qty;
+                    if trade_qty >= best.remaining {
+                        let _ = opp.pop_best();
+                    } else {
+                        opp.reduce_best(trade_qty);
+                    }
+                }
             }
-
-            let trade_qty = remaining.min(best.remaining);
-            let trade_price = best.price;
-            let trade = MatchTrade {
-                pair: book.pair.clone(),
-                taker_order_id,
-                maker_order_id: best.id,
-                taker_user_id,
-                maker_user_id: best.user_id,
-                taker_side: taker_side_enum,
-                price: trade_price,
-                quantity: trade_qty,
-                executed_at: Utc::now(),
-            };
-            trades.push(trade);
-
-            // Update remaining quantities.
-            remaining -= trade_qty;
-            if trade_qty >= best.remaining {
-                // Maker fully consumed.
-                let _ = opp.pop_best();
-            } else {
-                opp.reduce_best(trade_qty);
+            OrderSide::Sell => {
+                let mut opp = book.bids.write();
+                while remaining > Decimal::ZERO {
+                    let best = match opp.peek_best() {
+                        Some(o) => o.clone(),
+                        None => break,
+                    };
+                    let price_ok = match order_type {
+                        OrderType::Market => true,
+                        OrderType::Limit => best.price >= taker_price,
+                    };
+                    if !price_ok {
+                        break;
+                    }
+                    let trade_qty = remaining.min(best.remaining);
+                    let trade_price = best.price;
+                    trades.push(MatchTrade {
+                        pair: pair_local.clone(),
+                        taker_order_id: order_id_local,
+                        maker_order_id: best.id,
+                        taker_user_id: user_id_local,
+                        maker_user_id: best.user_id,
+                        taker_side: taker_side_enum,
+                        price: trade_price,
+                        quantity: trade_qty,
+                        executed_at: chrono::Utc::now(),
+                    });
+                    remaining -= trade_qty;
+                    if trade_qty >= best.remaining {
+                        let _ = opp.pop_best();
+                    } else {
+                        opp.reduce_best(trade_qty);
+                    }
+                }
             }
         }
 

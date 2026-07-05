@@ -66,6 +66,9 @@ pub enum AppError {
 
     #[error("anyhow: {0}")]
     Anyhow(#[from] anyhow::Error),
+
+    #[error("migration error: {0}")]
+    Migrate(#[from] sqlx::migrate::MigrateError),
 }
 
 impl AppError {
@@ -80,7 +83,7 @@ impl AppError {
             AppError::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             AppError::CircuitBreakerOpen => StatusCode::SERVICE_UNAVAILABLE,
             AppError::InsufficientBalance { .. } => StatusCode::PAYMENT_REQUIRED,
-            AppError::Internal(_) | AppError::Database(_) | AppError::Anyhow(_) => {
+            AppError::Internal(_) | AppError::Database(_) | AppError::Anyhow(_) | AppError::Migrate(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
             AppError::Redis(_) => StatusCode::SERVICE_UNAVAILABLE,
@@ -111,6 +114,7 @@ impl AppError {
             AppError::SerdeJson(_) => "serde_error",
             AppError::Io(_) => "io_error",
             AppError::Anyhow(_) => "anyhow",
+            AppError::Migrate(_) => "migrate_error",
         }
     }
 }
@@ -126,7 +130,8 @@ impl IntoResponse for AppError {
             | AppError::Redis(_)
             | AppError::Bcrypt(_)
             | AppError::Io(_)
-            | AppError::Anyhow(_) => "internal server error".to_string(),
+            | AppError::Anyhow(_)
+            | AppError::Migrate(_) => "internal server error".to_string(),
             other => other.to_string(),
         };
 
